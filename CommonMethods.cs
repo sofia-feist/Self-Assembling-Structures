@@ -114,6 +114,19 @@ public class CommonMethods
             return false;
     }
 
+    public bool OutsideBoundaries(Vector3 position, int AreaMin, int AreaMax)
+    {
+        if (position.x > AreaMax ||
+            position.y > AreaMax ||
+            position.z > AreaMax ||
+            position.x < AreaMin ||
+            position.y < AreaMin ||
+            position.z < AreaMin)
+            return true;
+        else
+            return false;
+    }
+
 
     // BackToBoundaries: Corrective Vector that drives an agent back within the boundaries -> Perpendicular to Boundary
     public Vector3 BackToBoundaries(Vector3 position, float velocity, float AreaMin, float AreaMax)
@@ -164,6 +177,40 @@ public class CommonMethods
             return true;
         else
             return false;
+    }
+
+
+    // InsideCollider: Checks if a given point is inside a collider
+    public bool InsideCollider(Vector3 point, Vector3 rayPosition)
+    {
+        //Physics.queriesHitBackfaces = true;    // IMPLEMENT?
+
+        int count = 0;
+        RaycastHit hit;
+
+        Vector3 rayStart = rayPosition;
+        Vector3 direction = point - rayStart;
+        Vector3 hitPoint = rayStart;
+
+        while (Physics.Raycast(hitPoint, direction, out hit, direction.magnitude) && count < 100)
+        {
+            hitPoint = hit.point + (direction.normalized / 10.0f);
+            count++;
+        }
+
+        hitPoint = point;
+
+        while (Physics.Raycast(hitPoint, -direction, out hit, direction.magnitude) && count < 100)
+        {
+            hitPoint = hit.point + (-direction.normalized / 10.0f);
+            count++;
+        }
+
+        // Check how many intersections there are
+        if (count % 2 == 0)
+            return false;
+        else   // if (count % 2 == 1)
+            return true;
     }
 
 
@@ -274,9 +321,16 @@ public class CommonMethods
     }
 
 
-    // Random Position (= Vector), with the X and Z coordinates placed randomly within the given boundaries
+    // Random Position (= Vector), with the X and Z coordinates placed randomly within the given boundaries (float numbers)
     public Vector3 RandomPosition(float AreaMin, float AreaMax)
     {
         return new Vector3(Random.Range(AreaMin, AreaMax), 0, Random.Range(AreaMin, AreaMax));
+    }
+
+
+    // Random Position (= Vector), with the X, Y and Z coordinates placed randomly within the given boundaries (int numbers)
+    public Vector3Int RandomPosition(int AreaMin, int AreaMax)
+    {
+        return new Vector3Int(Random.Range(AreaMin, AreaMax), Random.Range(AreaMin, AreaMax), Random.Range(AreaMin, AreaMax));
     }
 }
