@@ -14,31 +14,33 @@ public class MainCamera : MonoBehaviour
     Ray ray;
     Plane XZplane;
     float enter;
-
-
+     
     Vector3 zoomTarget;
     Vector3 rotateTarget;      //Center of the structure?
     
 
     void Start()
     {
+        slider = FindObjectOfType(typeof(SpeedSlider)) as SpeedSlider;
+
+
         // CAMERA START POSITION
         AreaMin = _3DSelfAssembly.AreaMin;
         AreaMax = _3DSelfAssembly.AreaMax;
         AreaWidth = Mathf.Abs(AreaMax - AreaMin);
-        this.transform.position = new Vector3(AreaMin + AreaWidth / 2, AreaWidth, AreaMin + AreaWidth / 2);
+        float AreaMiddle = AreaMin + AreaWidth * 0.5f;
+        this.transform.position = new Vector3(AreaMiddle, AreaMax, AreaMiddle);
 
 
 
-        slider = FindObjectOfType(typeof(SpeedSlider)) as SpeedSlider;
-
-        XZplane = new Plane(Vector3.up, new Vector3(AreaMin, AreaMin, AreaMin));   //Center of plane = Center of the structure?
-        //rotateTarget = new Vector3(AreaMin + AreaWidth / 2, AreaMin + AreaWidth / 2, AreaMin + AreaWidth / 2);  // CORRIGIR
-        rotateTarget = new Vector3(AreaMin + AreaWidth / 2, 0, AreaMin + AreaWidth / 2);
+        XZplane = new Plane(Vector3.up, new Vector3(AreaMiddle, AreaMin, AreaMiddle));
+        //rotateTarget = new Vector3(AreaMiddle, AreaMiddle, AreaMiddle);                 // CORRIGIR
+        rotateTarget = new Vector3(AreaMiddle, AreaMin, AreaMiddle);
     }
 
     void Update()
     {
+
         ///////////////////////////////////////
 
         // PAN

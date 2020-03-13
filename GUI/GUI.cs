@@ -29,10 +29,8 @@ public class GUI : MonoBehaviour
 
         // Slider
         reconfigurationSpeed.GetComponents<Slider>();
-        reconfigurationSpeed.minValue = SA.minSpeed;
-        reconfigurationSpeed.maxValue = SA.maxSpeed;
-        //Debug.Log(SA.minSpeed);
-        //Debug.Log(SA.maxSpeed);
+        reconfigurationSpeed.minValue = _3DSelfAssembly.minSpeed;
+        reconfigurationSpeed.maxValue = _3DSelfAssembly.maxSpeed;
 
 
         // Reset Button
@@ -42,6 +40,7 @@ public class GUI : MonoBehaviour
 
     void Update()
     {
+        // Update Slider value
         SA.currentSpeed = reconfigurationSpeed.value;
     }
     
@@ -49,7 +48,8 @@ public class GUI : MonoBehaviour
     void StartReconfiguration()
     {
         Paused = false;
-        StartCoroutine(SA.Reconfiguration());
+        StartCoroutine(SA.SelfAssembly());
+        //StartCoroutine(SA.RandomReconfiguration());
 
         reconfigurationButton.onClick.AddListener(Pause);
         GameObject.Find("ReconfigurationStart").GetComponentInChildren<Text>().text = "PAUSE";
@@ -62,7 +62,7 @@ public class GUI : MonoBehaviour
     {
         if (Paused == true)
         {
-            Paused = false;  // Can I change static field like this?
+            Paused = false;
             GameObject.Find("ReconfigurationStart").GetComponentInChildren<Text>().text = "PAUSE";
         }
         else

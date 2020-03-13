@@ -6,6 +6,29 @@ using static UnityEngine.Mathf;
 public class CommonMethods 
 {
 
+
+    // RandomShuffle: Fisher-Yates Shuffle algorithm; shuffles a list to randomly organize the its elements
+    public void RandomShuffle<T>(List<T> list)
+    {
+        for (int i = 0; i < list.Count; i++)
+        {
+            int j = i + UnityEngine.Random.Range(0, list.Count - i);
+
+            T temp = list[j];
+            list[j] = list[i];
+            list[i] = temp;
+        }
+    }
+
+
+
+
+
+
+
+
+
+
     ////////////////////////   AREA CHECKS  ////////////////////////
 
     // ClosestPosition: Calculates the closest position between a given position and an outside list of positions
@@ -183,7 +206,7 @@ public class CommonMethods
     // InsideCollider: Checks if a given point is inside a collider
     public bool InsideCollider(Vector3 point, Vector3 rayPosition)
     {
-        //Physics.queriesHitBackfaces = true;    // IMPLEMENT?
+        //Physics.queriesHitBackfaces = true;    // IMPLEMENT!!!
 
         int count = 0;
         RaycastHit hit;

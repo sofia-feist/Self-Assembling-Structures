@@ -5,14 +5,12 @@ using System.Linq;
 public class Agents
 {
     CommonMethods CM = new CommonMethods();
-    CellGrid _grid = new CellGrid(_3DSelfAssembly.AreaMin, _3DSelfAssembly.AreaMax);
+    CellGrid _grid;
 
 
     GameObject agent;
     Material material;
     int NumberOfAgents;
-
-
 
     public Agent[] listAgents;
 
@@ -21,8 +19,9 @@ public class Agents
 
 
     // Constructor
-    public Agents(GameObject prefab, Material _material, int _NumberOfAgents)
+    public Agents(CellGrid grid, GameObject prefab, Material _material, int _NumberOfAgents)
     {
+        _grid = grid;
         agent = prefab;
         material = _material;
         NumberOfAgents = _NumberOfAgents;
@@ -36,20 +35,21 @@ public class Agents
     ////////////////////////////   CELL PLACEMENT METHODS  ////////////////////////////
 
     // FillCellsWithAgents: Fills the entire grid of cells with agents
-    public Agent[] FillCellsWithAgents(Cell[,,] cells)
+    public Agent[] FillCellsWithAgents()
     {
-        for (int x = 0; x < cells.GetLength(0); x++)
+        for (int x = 0; x < _grid.Cells.GetLength(0); x++)
         {
-            for (int y = 0; y < cells.GetLength(1); y++)
+            for (int y = 0; y < _grid.Cells.GetLength(1); y++)
             {
-                for (int z = 0; z < cells.GetLength(2); z++)
+                for (int z = 0; z < _grid.Cells.GetLength(2); z++)
                 {
-                    Cell currentCell = cells[x, y, z];
+                    Cell currentCell = _grid.Cells[x, y, z];
                     currentCell.Alive = true;
                     
                     Agent newAgent = new Agent(agent, material, currentCell.Center);
                     newAgent.Location = currentCell;
-                    int i = cells.GetLength(1) * x + cells.GetLength(2) * y + z;
+                    currentCell.agent = newAgent;
+                    int i = _grid.Cells.GetLength(1) * x + _grid.Cells.GetLength(2) * y + z;
                     listAgents[i] = newAgent;
                 }
             }
@@ -58,26 +58,61 @@ public class Agents
     }
 
 
-    // PlaceAgentsInRowsCells: Places the agents in a 2D regular grid
-    public Agent[] PlaceAgentsIn2DGrid(Vector3Int placement, Cell[,,] cells)     // REVIEW 2D PART
+    // PlaceAgentsIn2DRows: Places the agents in a 2D regular grid of rows
+    public Agent[] PlaceAgentsIn2DRows(Vector3Int placement) 
     {
-        int rows = (int) Mathf.Ceil(Mathf.Sqrt(NumberOfAgents));
-        int columns = (int) Mathf.Ceil(Mathf.Sqrt(NumberOfAgents));
+        int count = 0;
+
+        int rows = (int)Mathf.Ceil(Mathf.Sqrt(NumberOfAgents));        // Square root of number of Agents
+        int columns = (int)Mathf.Ceil(Mathf.Sqrt(NumberOfAgents));
 
         for (int i = 0; i < rows; i++)
         {
             for (int j = 0; j < columns; j++)
             {
-                int index = columns * i + j;
-
-                if (index < NumberOfAgents)
+                if (count < NumberOfAgents)
                 {
-                    Cell cell = cells[i + placement.x, placement.y, j + placement.z];   // CHECK EXCEPTION OF IF OUTSIDE BOUNDARIES (UP Y?)
+                    Cell cell = _grid.Cells[i + placement.x, placement.y, j + placement.z];    // Check Exception if Outside Area Boundaries? -> Make 3D Rows instead
                     cell.Alive = true;
 
                     Agent newAgent = new Agent(agent, material, cell.Center);
                     newAgent.Location = cell;
-                    listAgents[index] = newAgent;
+                    cell.agent = newAgent;
+                    listAgents[count] = newAgent;
+                    count++;
+                }
+            }
+        }
+        return listAgents;
+    }
+
+
+    // PlaceAgentsIn3DRows: Places the agents in a 3D regular grid of rows
+    public Agent[] PlaceAgentsIn3DRows(Vector3Int placement)
+    {
+        int count = 0;
+
+        int rows = (int) Mathf.Ceil(Mathf.Pow(NumberOfAgents, 1f / 3f));       // Cubic root of number of Agents
+        int columns = (int) Mathf.Ceil(Mathf.Pow(NumberOfAgents, 1f / 3f));
+        int height = (int) Mathf.Ceil(Mathf.Pow(NumberOfAgents, 1f / 3f));
+
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j < rows; j++)
+            {
+                for (int k = 0; k < columns; k++)
+                {
+                    if (count < NumberOfAgents)
+                    {
+                        Cell cell = _grid.Cells[j + placement.x, i + placement.y, k + placement.z];
+                        cell.Alive = true;
+
+                        Agent newAgent = new Agent(agent, material, cell.Center);
+                        newAgent.Location = cell;
+                        cell.agent = newAgent;
+                        listAgents[count] = newAgent;
+                        count++;
+                    }
                 }
             }
         }
@@ -97,6 +132,7 @@ public class Agents
 
             Agent newAgent = new Agent(agent, material, currentCell.Center);
             newAgent.Location = currentCell;
+            currentCell.agent = newAgent;
             listAgents[i] = newAgent;
         }
         return listAgents;
@@ -120,6 +156,7 @@ public class Agents
 
                 Agent newAgent = new Agent(agent, material, currentCell.Center);
                 newAgent.Location = currentCell;
+                currentCell.agent = newAgent;
                 listAgents[index] = newAgent;
                 index++;
             }
@@ -129,12 +166,13 @@ public class Agents
 
 
     // PlaceConnectedAgentsRandomly: Randomly places the agents in the cell grid with no overlap/intersections and NO DISCONNECTIONS in the structure
-    public Agent[] PlaceConnectedAgentsRandomly(Vector3Int placement)
+    public Agent[] PlaceConnectedAgentsRandomly(Vector3 placement)
     {
         int tries = 10000;    ///// tries -> loop failsafe
         int index = 0;
 
-        Cell firstCell = _grid.GetCell(placement);
+        Vector3Int firstCellPlacement = _grid.GetCellLocation(placement);
+        Cell firstCell = _grid.GetCell(firstCellPlacement);
         firstCell.Alive = true;
 
         Agent firstAgent = new Agent(agent, material, firstCell.Center);
@@ -155,6 +193,7 @@ public class Agents
                 
                 Agent newAgent = new Agent(agent, material, randomNeighbour.Center);
                 newAgent.Location = randomNeighbour;
+                randomNeighbour.agent = newAgent;
                 listAgents[index] = newAgent;
                 index++;
             }
