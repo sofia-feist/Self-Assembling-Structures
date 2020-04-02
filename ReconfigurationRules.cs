@@ -5,6 +5,8 @@ using System.Linq;
 using UnityEngine;
 
 
+
+// Action enumerator: Enumerates possible actions
 public enum Action
 {
     NoAction  = -1,
@@ -51,67 +53,73 @@ public enum Action
 
 
 
+
 public class ReconfigurationRules
 {
-    CellGrid grid;
     CommonMethods CM = new CommonMethods();
-    
+
+
     float speed;
+    static List<Rule> ruleList;
+
+
 
 
     // Constructor
-    public ReconfigurationRules(CellGrid _grid, float _speed)
+    public ReconfigurationRules(float _speed)
     {
-        grid = _grid;
         speed = _speed;
+        ruleList = RuleList();
     }
 
 
 
 
 
-    public List<Func<Cell, Action>> RuleList()
+
+    // RuleList: Compilation of the possible movement rules
+    public List<Rule> RuleList()
     {
-        var rules = new List<Func<Cell, Action>>();
+        var rules = new List<Rule>();
 
         // Linear Mouvements
-        rules.Add(North);
-        rules.Add(South);
-        rules.Add(East);
-        rules.Add(West);
-        rules.Add(Up);
-        rules.Add(Down);
+        rules.Add(new North());
+        rules.Add(new South());
+        rules.Add(new East());
+        rules.Add(new West());
+        rules.Add(new Up());
+        rules.Add(new Down());
 
         // Convex/Concave Mouvements
-        rules.Add(UpNorth);
-        rules.Add(DownNorth);
-        rules.Add(NorthUp);
-        rules.Add(NorthDown);
+        rules.Add(new UpNorth());
+        rules.Add(new DownNorth());
+        rules.Add(new NorthUp());
+        rules.Add(new NorthDown());
 
-        rules.Add(UpSouth);
-        rules.Add(DownSouth);
-        rules.Add(SouthUp);
-        rules.Add(SouthDown);
+        rules.Add(new UpSouth());
+        rules.Add(new DownSouth());
+        rules.Add(new SouthUp());
+        rules.Add(new SouthDown());
 
-        rules.Add(UpEast);
-        rules.Add(DownEast);
-        rules.Add(EastUp);
-        rules.Add(EastDown);
+        rules.Add(new UpEast());
+        rules.Add(new DownEast());
+        rules.Add(new EastUp());
+        rules.Add(new EastDown());
 
-        rules.Add(UpWest);
-        rules.Add(DownWest);
-        rules.Add(WestUp);
-        rules.Add(WestDown);
+        rules.Add(new UpWest());
+        rules.Add(new DownWest());
+        rules.Add(new WestUp());
+        rules.Add(new WestDown());
 
-        rules.Add(NorthEast);
-        rules.Add(NorthWest);
-        rules.Add(EastNorth);
-        rules.Add(WestNorth);
+        rules.Add(new NorthEast());
+        rules.Add(new NorthWest());
+        rules.Add(new EastNorth());
+        rules.Add(new WestNorth());
 
-        rules.Add(SouthEast);
-        rules.Add(SouthWest);
-        rules.Add(EastSouth);
-        rules.Add(WestSouth);
+        rules.Add(new SouthEast());
+        rules.Add(new SouthWest());
+        rules.Add(new EastSouth());
+        rules.Add(new WestSouth());
 
         return rules;
     }
@@ -119,164 +127,178 @@ public class ReconfigurationRules
 
 
 
-    public Action CheckRules(Agent agent)
+
+    // ChoseAction: Choose an action to take according rule fitness
+    public Action ChoseAction(Agent agent)
     {
         Action nextAction = Action.NoAction;
-        CM.RandomShuffle(RuleList());  //Is this Working properly?
+        CM.RandomShuffle(ruleList);  //Is this Working properly?
 
-        foreach (var rule in RuleList())  
+        List<Rule> rulesThatApply = new List<Rule>();
+
+        foreach (var rule in ruleList)  
         {
-            Action currentAction = rule(agent.Location);
+            Cell currentCell = agent.Location;
+            rule.SetTargetCell(currentCell);
+            Action currentAction = rule.CheckAction(currentCell);
 
             if (currentAction != Action.NoAction)
             {
-                nextAction = currentAction;
-                break;
+                rule.CalculateFitness(currentCell);
+                rulesThatApply.Add(rule);
+                rulesThatApply = rulesThatApply.OrderByDescending(r => r.fitness).ToList();    // Sort by fitness
             }
         }
+
+        if (rulesThatApply.Count != 0) 
+            nextAction = rulesThatApply[0].action;
+
         return nextAction;
     }
 
 
+
+    // ExecuteAction: Executes a given Action
     public void ExecuteAction(MonoBehaviour mono, Action action, Agent agent)
     {
         Cell currentCell = agent.Location;
+        int cellSize = currentCell.CellSize;
 
         switch (action)
         {
             // Linear Mouvements
             case Action.North:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, grid.MN(currentCell), Vector3.forward, agent, currentCell.CellSize));
+                    LinearMove(currentCell, currentCell.MiddleNorth(), Vector3.forward, agent, cellSize));
                 break;
             case Action.South:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, grid.MS(currentCell), Vector3.back, agent, currentCell.CellSize));
+                    LinearMove(currentCell, currentCell.MiddleSouth(), Vector3.back, agent, cellSize));
                 break;
             case Action.East:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, grid.ME(currentCell), Vector3.right, agent, currentCell.CellSize));
+                    LinearMove(currentCell, currentCell.MiddleEast(), Vector3.right, agent, cellSize));
                 break;
             case Action.West:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, grid.MW(currentCell), Vector3.left, agent, currentCell.CellSize));
+                    LinearMove(currentCell, currentCell.MiddleWest(), Vector3.left, agent, cellSize));
                 break;
             case Action.Up:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, grid.U(currentCell), Vector3.up, agent, currentCell.CellSize));
+                    LinearMove(currentCell, currentCell.Up(), Vector3.up, agent, cellSize));
                 break;
             case Action.Down:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, grid.B(currentCell), Vector3.down, agent, currentCell.CellSize));
+                    LinearMove(currentCell, currentCell.Bottom(), Vector3.down, agent, cellSize));
                 break;
 
 
             // Convex/Concave Mouvements
             case Action.UpNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.U(currentCell), grid.UN(currentCell), Vector3.up, Vector3.forward, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperNorth(), Vector3.up, Vector3.forward, agent, cellSize));
                 break;
             case Action.DownNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.B(currentCell), grid.BN(currentCell), Vector3.down, Vector3.forward, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomNorth(), Vector3.down, Vector3.forward, agent, cellSize));
                 break;
             case Action.NorthUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MN(currentCell), grid.UN(currentCell), Vector3.forward, Vector3.up, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.UpperNorth(), Vector3.forward, Vector3.up, agent, cellSize));
                 break;
             case Action.NorthDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MN(currentCell), grid.BN(currentCell), Vector3.forward, Vector3.down, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.BottomNorth(), Vector3.forward, Vector3.down, agent, cellSize));
                 break;
 
 
             case Action.UpSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.U(currentCell), grid.US(currentCell), Vector3.up, Vector3.back, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperSouth(), Vector3.up, Vector3.back, agent, cellSize));
                 break;
             case Action.DownSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.B(currentCell), grid.BS(currentCell), Vector3.down, Vector3.back, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomSouth(), Vector3.down, Vector3.back, agent, cellSize));
                 break;
             case Action.SouthUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MS(currentCell), grid.US(currentCell), Vector3.back, Vector3.up, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.UpperSouth(), Vector3.back, Vector3.up, agent, cellSize));
                 break;
             case Action.SouthDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MS(currentCell), grid.BS(currentCell), Vector3.back, Vector3.down, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.BottomSouth(), Vector3.back, Vector3.down, agent, cellSize));
                 break;
 
 
             case Action.UpEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.U(currentCell), grid.UE(currentCell), Vector3.up, Vector3.right, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperEast(), Vector3.up, Vector3.right, agent, cellSize));
                 break;
             case Action.DownEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.B(currentCell), grid.BE(currentCell), Vector3.down, Vector3.right, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomEast(), Vector3.down, Vector3.right, agent, cellSize));
                 break;
             case Action.EastUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.ME(currentCell), grid.UE(currentCell), Vector3.right, Vector3.up, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.UpperEast(), Vector3.right, Vector3.up, agent, cellSize));
                 break;
             case Action.EastDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.ME(currentCell), grid.BE(currentCell), Vector3.right, Vector3.down, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.BottomEast(), Vector3.right, Vector3.down, agent, cellSize));
                 break;
 
 
             case Action.UpWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.U(currentCell), grid.UW(currentCell), Vector3.up, Vector3.left, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperWest(), Vector3.up, Vector3.left, agent, cellSize));
                 break;
             case Action.DownWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.B(currentCell), grid.BW(currentCell), Vector3.down, Vector3.left, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomWest(), Vector3.down, Vector3.left, agent, cellSize));
                 break;
             case Action.WestUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MW(currentCell), grid.UW(currentCell), Vector3.left, Vector3.up, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.UpperWest(), Vector3.left, Vector3.up, agent, cellSize));
                 break;
             case Action.WestDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MW(currentCell), grid.BW(currentCell), Vector3.left, Vector3.down, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.BottomWest(), Vector3.left, Vector3.down, agent, cellSize));
                 break;
 
 
             case Action.NorthEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MN(currentCell), grid.MNE(currentCell), Vector3.forward, Vector3.right, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.MiddleNorthEast(), Vector3.forward, Vector3.right, agent, cellSize));
                 break;
             case Action.NorthWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MN(currentCell), grid.MNW(currentCell), Vector3.forward, Vector3.left, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.MiddleNorthWest(), Vector3.forward, Vector3.left, agent, cellSize));
                 break;
             case Action.EastNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.ME(currentCell), grid.MNE(currentCell), Vector3.right, Vector3.forward, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.MiddleNorthEast(), Vector3.right, Vector3.forward, agent, cellSize));
                 break;
             case Action.WestNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MW(currentCell), grid.MNW(currentCell), Vector3.left, Vector3.forward, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.MiddleNorthWest(), Vector3.left, Vector3.forward, agent, cellSize));
                 break;
 
 
             case Action.SouthEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MS(currentCell), grid.MSE(currentCell), Vector3.back, Vector3.right, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.MiddleSouthEast(), Vector3.back, Vector3.right, agent, cellSize));
                 break;
             case Action.SouthWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MS(currentCell), grid.MSW(currentCell), Vector3.back, Vector3.left, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.MiddleSouthWest(), Vector3.back, Vector3.left, agent, cellSize));
                 break;
             case Action.EastSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.ME(currentCell), grid.MSE(currentCell), Vector3.right, Vector3.back, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.MiddleSouthEast(), Vector3.right, Vector3.back, agent, cellSize));
                 break;
             case Action.WestSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, grid.MW(currentCell), grid.MSW(currentCell), Vector3.left, Vector3.back, agent, currentCell.CellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.MiddleSouthWest(), Vector3.left, Vector3.back, agent, cellSize));
                 break;
         }
     }
@@ -285,65 +307,99 @@ public class ReconfigurationRules
 
 
 
-    ////////////////////////////   RULES  ////////////////////////////
 
-    // CheckDisconnections: checks a given cell's neighbourhood to predict disconnections in the structure
-    public bool PotentialDisconnections(Cell currentCell)
+
+    ////////////////////////////   ACTION RULES  ////////////////////////////
+
+    // ABSTRACT RULE
+    public abstract class Rule
     {
-        var Neighbours = currentCell.GetFaceNeighbours().Where(n => n.Alive);
+        public int fitness { get; set; }
+        public Cell targetCell { get; set; }
+        public Action action { get; set; }
 
-        foreach (var neighbour in Neighbours)
+
+
+
+
+        // ABSTRACT METHODS:
+        public abstract Action CheckAction(Cell currentCell);
+        public abstract void SetTargetCell(Cell currentCell);
+
+
+
+        // COMMON METHODS: 
+        // CheckDisconnections: checks a given cell's neighbourhood to predict potential disconnections in the structure
+        public bool PotentialDisconnections(Cell currentCell)
         {
-            int nNeighbours = neighbour.GetFaceNeighbours().Count(n => n.Alive);
+            var FaceNeighbours = currentCell.GetFaceNeighbours().Where(n => n.Alive);
+            var AllNeighbours = currentCell.GetAllNeighbours().Where(n => n.Alive);
+            var potentialCommonNeighbours = new List<Cell>();
 
-            if (nNeighbours == 1 ||        // If neighbour only has one face neighbour (aka current cell), DO NOT MOVE
-                Neighbours.Count() == 2)   // CORRECT
+            foreach (var neighbour in FaceNeighbours)
+            {
+                var nNeighbours = neighbour.GetFaceNeighbours().Where(n => n.Alive);
+                potentialCommonNeighbours.AddRange(nNeighbours);
+
+                if ((FaceNeighbours.Count() != 1 && nNeighbours.Count() == 1) ||        // If neighbour only has one face neighbour (aka current cell), DO NOT MOVE
+                    (FaceNeighbours.Count() == 2 && FaceNeighbours.ElementAt(0).OppositeNeighbours(FaceNeighbours.ElementAt(1))) ||  // If current cell only has two face neighbours on opposite faces, DO NOT MOVE
+                    (FaceNeighbours.Count() == 2 && AllNeighbours.Count() < 3))
+                    return true;
+            }
+
+            if (FaceNeighbours.Count() > 1 && !potentialCommonNeighbours.GroupBy(n => n.Location).Any(g => g.Count() > 1 && g.Key != currentCell.Location)) // If current cell is the only cell in common between two face neighbours, DO NOT MOVE
                 return true;
-        }    // CHECK ALSO: Neighbours.Count() == 2 (opposite faces) or Neighbours.Count() == 2 (adjacent faces -> check connector block)
 
-        return false;
-    }
-
-
-    // TARGET/TRANSITION CELLS CHECK
-    // TargetCellUnoccupied: Check if a given target cell an agent is trying to move into is unoccupied
-    public bool TargetCellUnoccupied(Cell TargetCell)
-    {
-        return (TargetCell?.Alive == false) ? true : false;
-    }
-
-
-    // TransitionCellUnoccupied: Check if a given transition cell an agent has to pass through to get to the target cell is unoccupied
-    public bool TransitionCellUnoccupied(Cell TransitionCell)
-    {
-        return (TransitionCell?.Alive == false) ? true : false;
-    }
-
-
-
-    // CONNECTOR CELLS CHECKS
-    // ConnectorCellsExist_Linear: Checks if the connector cells through which the agent is and will connect to exist; for Linear Mouvement
-    public bool ConnectorCellsExist_Linear(Cell InitialConnectorCell, Cell GoalConnectorCell)
-    {
-        return (InitialConnectorCell?.Alive == true && GoalConnectorCell?.Alive == true) ? true : false;
-    }
-
-    // ConnectorCellExists_Convex: Checks if the connector cell which the agent will connect around exists; for Convex Mouvement
-    public bool ConnectorCellExists_Convex(Cell ConvexConnectorCell)
-    {
-        return ConvexConnectorCell?.Alive == true ? true : false;
-    }
-
-    // ConnectorCellsExist_Concave: Checks if the connector cells through which the agent is and will connect to exist; for Concave Mouvement
-    public bool ConnectorCellsExist_Concave(Cell ConnectCell1, Cell ConnectCell2, Cell ConnectCell3, Cell ConnectCell4)
-    {
-        if (ConnectCell1?.Alive == true &&
-            ConnectCell2?.Alive == true &&
-            ConnectCell3?.Alive == true &&
-            ConnectCell4?.Alive == true)
-            return true;
-        else
             return false;
+        }
+
+
+        // TARGET/TRANSITION CELLS CHECK
+        // TargetCellUnoccupied: Check if a given target cell an agent is trying to move into is unoccupied
+        public bool TargetCellUnoccupied(Cell TargetCell) { return (TargetCell?.Alive == false) ? true : false; }
+
+
+        // TransitionCellUnoccupied: Check if a given transition cell an agent has to pass through to get to the target cell is unoccupied
+        public bool TransitionCellUnoccupied(Cell TransitionCell) { return (TransitionCell?.Alive == false) ? true : false; }
+
+
+
+        // CONNECTOR CELLS CHECKS
+        // ConnectorCellsExist_Linear: Checks if the connector cells through which the agent is and will connect to exist; for Linear Mouvement
+        public bool ConnectorCellsExist_Linear(Cell InitialConnectorCell, Cell GoalConnectorCell) {
+            return (InitialConnectorCell?.Alive == true && GoalConnectorCell?.Alive == true) ? true : false; }
+
+
+        // ConnectorCellExists_Convex: Checks if the connector cell which the agent will rotate around exists; for Convex Mouvement
+        public bool ConnectorCellExists_Convex(Cell ConvexConnectorCell) { return ConvexConnectorCell?.Alive == true ? true : false; }
+
+
+        // ConnectorCellsExist_Concave: Checks if the connector cells through which the agent is and will connect to exist; for Concave Mouvement
+        public bool ConnectorCellsExist_Concave(Cell ConnectCell1, Cell ConnectCell2, Cell ConnectCell3, Cell ConnectCell4)
+        {
+            if (ConnectCell1?.Alive == true &&
+                ConnectCell2?.Alive == true &&
+                ConnectCell3?.Alive == true &&
+                ConnectCell4?.Alive == true)
+                return true;
+            else
+                return false;
+        }
+
+
+        public void CalculateFitness(Cell currentCell)
+        {
+            int currentScent = currentCell.agent.ScentValue;
+            var targetNeighbours = targetCell.GetFaceNeighbours().Where(a => a.Alive == true);
+            int newScentValue = (targetNeighbours.Count() != 0) ? targetNeighbours.Select(s => s.agent.ScentValue).Max() - 1 : 0;
+
+            if (currentScent == newScentValue)
+                fitness = 0;
+            else if (newScentValue > currentScent)
+                fitness = 1;
+            else
+                fitness = -1;
+        }
     }
 
 
@@ -352,784 +408,983 @@ public class ReconfigurationRules
 
 
 
-    ////////////////////////////   RULES  ////////////////////////////
-
+    ////// SPECIFIC RULES
+    ///
     // LINEAR TRANSITIONS
-    public Action North(Cell currentCell)
+
+    // North
+    public class North : Rule
     {
-        var middleNorth = grid.MN(currentCell);
-        var middleSouth = grid.MS(currentCell);
-
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
-
-        var middleNorthEast = grid.MNE(currentCell);
-        var middleNorthWest = grid.MNW(currentCell);
-        var bottomNorth = grid.BN(currentCell);
-        var upNorth = grid.UN(currentCell);
-
-        if (TargetCellUnoccupied(middleNorth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellsExist_Linear(middleEast, middleNorthEast) ||      // Travel through the East side
-             ConnectorCellsExist_Linear(middleWest, middleNorthWest) ||      // Travel through the West side
-             ConnectorCellsExist_Linear(bottom, bottomNorth)         ||      // Travel through the Bottom side
-             ConnectorCellsExist_Linear(up, upNorth))  &&                    // Travel through the Upper side
-            (middleSouth == null || middleSouth.Alive == false))
+        public North()  { action = Action.North; }
         
-            return Action.North;
-        else
-            return Action.NoAction;
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleNorth(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var middleNorth = targetCell;
+
+            var middleEast = currentCell.MiddleEast();
+            var middleWest = currentCell.MiddleWest();
+            var bottom = currentCell.Bottom();
+            var up = currentCell.Up();
+
+            var middleNorthEast = currentCell.MiddleNorthEast();
+            var middleNorthWest = currentCell.MiddleNorthWest();
+            var bottomNorth = currentCell.BottomNorth();
+            var upNorth = currentCell.UpperNorth();
+
+            if (TargetCellUnoccupied(middleNorth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellsExist_Linear(middleEast, middleNorthEast) ||      // Travel through the East side
+                 ConnectorCellsExist_Linear(middleWest, middleNorthWest) ||      // Travel through the West side
+                 ConnectorCellsExist_Linear(bottom, bottomNorth) ||              // Travel through the Bottom side
+                 ConnectorCellsExist_Linear(up, upNorth)))                       // Travel through the Upper side
+
+                return Action.North;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action South(Cell currentCell)
+    // South
+    public class South : Rule
     {
-        var middleSouth = grid.MS(currentCell);
-        var middleNorth = grid.MS(currentCell);
+        public South() { action = Action.South; }
 
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleSouth(); }
 
-        var middleSouthEast = grid.MSE(currentCell);
-        var middleSouthWest = grid.MSW(currentCell);
-        var upperSouth = grid.US(currentCell);
-        var bottomSouth = grid.BS(currentCell);
-        
-        if (TargetCellUnoccupied(middleSouth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellsExist_Linear(middleEast, middleSouthEast) ||      // Travel through the East side
-             ConnectorCellsExist_Linear(middleWest, middleSouthWest) ||      // Travel through the West side
-             ConnectorCellsExist_Linear(bottom, bottomSouth) ||              // Travel through the Bottom side
-             ConnectorCellsExist_Linear(up, upperSouth)) &&                  // Travel through the Upper side
-            (middleNorth == null || middleNorth.Alive == false))
 
-            return Action.South;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var middleSouth = targetCell;
+
+            var middleEast = currentCell.MiddleEast();
+            var middleWest = currentCell.MiddleWest();
+            var bottom = currentCell.Bottom();
+            var up = currentCell.Up();
+
+            var middleSouthEast = currentCell.MiddleSouthEast();
+            var middleSouthWest = currentCell.MiddleSouthWest();
+            var upperSouth = currentCell.UpperSouth();
+            var bottomSouth = currentCell.BottomSouth();
+
+            if (TargetCellUnoccupied(middleSouth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellsExist_Linear(middleEast, middleSouthEast) ||      // Travel through the East side
+                 ConnectorCellsExist_Linear(middleWest, middleSouthWest) ||      // Travel through the West side
+                 ConnectorCellsExist_Linear(bottom, bottomSouth) ||              // Travel through the Bottom side
+                 ConnectorCellsExist_Linear(up, upperSouth)))                    // Travel through the Upper side
+
+                return Action.South;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action East(Cell currentCell)
+    // East
+    public class East : Rule
     {
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
+        public East() { action = Action.East; }
 
-        var middleSouth = grid.MS(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleEast(); }
 
-        var middleSouthEast = grid.MSE(currentCell);
-        var middleNorthEast = grid.MNE(currentCell);
-        var upperEast = grid.UE(currentCell);
-        var bottomEast = grid.BE(currentCell);
 
-        if (TargetCellUnoccupied(middleEast) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellsExist_Linear(middleSouth, middleSouthEast) ||      // Travel through the South side
-             ConnectorCellsExist_Linear(middleNorth, middleNorthEast) ||      // Travel through the North side
-             ConnectorCellsExist_Linear(bottom, bottomEast) ||                // Travel through the Bottom side
-             ConnectorCellsExist_Linear(up, upperEast)) &&                    // Travel through the Upper side
-            (middleWest == null || middleWest.Alive == false))
+        public override Action CheckAction(Cell currentCell)
+        {
+            var middleEast = targetCell;
 
-            return Action.East;
-        else
-            return Action.NoAction;
+            var middleSouth = currentCell.MiddleSouth();
+            var middleNorth = currentCell.MiddleNorth();
+            var bottom = currentCell.Bottom();
+            var up = currentCell.Up();
+
+            var middleSouthEast = currentCell.MiddleSouthEast();
+            var middleNorthEast = currentCell.MiddleNorthEast();
+            var upperEast = currentCell.UpperEast();
+            var bottomEast = currentCell.BottomEast();
+
+            if (TargetCellUnoccupied(middleEast) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellsExist_Linear(middleSouth, middleSouthEast) ||      // Travel through the South side
+                 ConnectorCellsExist_Linear(middleNorth, middleNorthEast) ||      // Travel through the North side
+                 ConnectorCellsExist_Linear(bottom, bottomEast) ||                // Travel through the Bottom side
+                 ConnectorCellsExist_Linear(up, upperEast)))                      // Travel through the Upper side
+
+                return Action.East;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action West(Cell currentCell)
+    // West
+    public class West : Rule
     {
-        var middleWest = grid.MW(currentCell);
-        var middleEast = grid.ME(currentCell);
+        public West() { action = Action.West; }
 
-        var middleSouth = grid.MS(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleWest(); }
 
-        var middleSouthWest = grid.MSW(currentCell);
-        var middleNorthWest = grid.MNW(currentCell);
-        var upperWest = grid.UW(currentCell);
-        var bottomWest = grid.BW(currentCell);
 
-        if (TargetCellUnoccupied(middleWest) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellsExist_Linear(middleSouth, middleSouthWest) ||      // Travel through the South side
-             ConnectorCellsExist_Linear(middleNorth, middleNorthWest) ||      // Travel through the North side
-             ConnectorCellsExist_Linear(bottom, bottomWest) ||                // Travel through the Bottom side
-             ConnectorCellsExist_Linear(up, upperWest)) &&                    // Travel through the Upper side
-            (middleEast == null || middleEast.Alive == false))
+        public override Action CheckAction(Cell currentCell)
+        {
+            var middleWest = targetCell;
 
-            return Action.West;
-        else
-            return Action.NoAction;  
+            var middleSouth = currentCell.MiddleSouth();
+            var middleNorth = currentCell.MiddleNorth();
+            var bottom = currentCell.Bottom();
+            var up = currentCell.Up();
+
+            var middleSouthWest = currentCell.MiddleSouthWest();
+            var middleNorthWest = currentCell.MiddleNorthWest();
+            var upperWest = currentCell.UpperWest();
+            var bottomWest = currentCell.BottomWest();
+
+            if (TargetCellUnoccupied(middleWest) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellsExist_Linear(middleSouth, middleSouthWest) ||      // Travel through the South side
+                 ConnectorCellsExist_Linear(middleNorth, middleNorthWest) ||      // Travel through the North side
+                 ConnectorCellsExist_Linear(bottom, bottomWest) ||                // Travel through the Bottom side
+                 ConnectorCellsExist_Linear(up, upperWest)))                      // Travel through the Upper side
+
+                return Action.West;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action Up(Cell currentCell)
+    // Up
+    public class Up : Rule
     {
-        var up = grid.U(currentCell);
-        var bottom = grid.B(currentCell);
+        public Up() { action = Action.Up; }
 
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var middleNorth = grid.MN(currentCell);
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.Up(); }
 
-        var upperEast = grid.UE(currentCell);
-        var upperWest = grid.UW(currentCell);
-        var upperNorth = grid.UN(currentCell);
-        var upperSouth = grid.US(currentCell);
-        
-        if (TargetCellUnoccupied(up) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellsExist_Linear(middleEast, upperEast) ||         // Travel through the East side
-             ConnectorCellsExist_Linear(middleWest, upperWest) ||         // Travel through the West side
-             ConnectorCellsExist_Linear(middleNorth, upperNorth) ||       // Travel through the North side
-             ConnectorCellsExist_Linear(middleSouth, upperSouth)) &&      // Travel through the South side
-            (bottom == null || bottom.Alive == false))
 
-            return Action.Up;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var up = targetCell;
+
+            var middleEast = currentCell.MiddleEast();
+            var middleWest = currentCell.MiddleWest();
+            var middleSouth = currentCell.MiddleSouth();
+            var middleNorth = currentCell.MiddleNorth();
+
+            var upperEast = currentCell.UpperEast();
+            var upperWest = currentCell.UpperWest();
+            var upperNorth = currentCell.UpperNorth();
+            var upperSouth = currentCell.UpperSouth();
+
+            if (TargetCellUnoccupied(up) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellsExist_Linear(middleEast, upperEast) ||         // Travel through the East side
+                 ConnectorCellsExist_Linear(middleWest, upperWest) ||         // Travel through the West side
+                 ConnectorCellsExist_Linear(middleNorth, upperNorth) ||       // Travel through the North side
+                 ConnectorCellsExist_Linear(middleSouth, upperSouth)))        // Travel through the South side
+
+                return Action.Up;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action Down(Cell currentCell)
+    // Down
+    public class Down : Rule
     {
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
+        public Down() { action = Action.Down; }
 
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var middleNorth = grid.MN(currentCell);
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.Bottom(); }
 
-        var bottomEast = grid.BE(currentCell);
-        var bottomWest = grid.BW(currentCell);
-        var bottomNorth = grid.BN(currentCell);
-        var bottomSouth = grid.BS(currentCell);
 
-        if (TargetCellUnoccupied(bottom) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellsExist_Linear(middleEast, bottomEast) ||         // Travel through the East side
-             ConnectorCellsExist_Linear(middleWest, bottomWest) ||         // Travel through the West side
-             ConnectorCellsExist_Linear(middleNorth, bottomNorth) ||       // Travel through the North side
-             ConnectorCellsExist_Linear(middleSouth, bottomSouth)) &&      // Travel through the South side
-            (up == null || up.Alive == false))
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottom = targetCell;
 
-            return Action.Down;
-        else
-            return Action.NoAction;
+            var middleEast = currentCell.MiddleEast();
+            var middleWest = currentCell.MiddleWest();
+            var middleSouth = currentCell.MiddleSouth();
+            var middleNorth = currentCell.MiddleNorth();
+
+            var bottomEast = currentCell.BottomEast();
+            var bottomWest = currentCell.BottomWest();
+            var bottomNorth = currentCell.BottomNorth();
+            var bottomSouth = currentCell.BottomSouth();
+
+            if (TargetCellUnoccupied(bottom) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellsExist_Linear(middleEast, bottomEast) ||         // Travel through the East side
+                 ConnectorCellsExist_Linear(middleWest, bottomWest) ||         // Travel through the West side
+                 ConnectorCellsExist_Linear(middleNorth, bottomNorth) ||       // Travel through the North side
+                 ConnectorCellsExist_Linear(middleSouth, bottomSouth)))        // Travel through the South side
+
+                return Action.Down;
+            else
+                return Action.NoAction;
+        }
     }
+
+
 
 
 
     // CONVEX/CONCAVE TRANSITIONS
-    public Action UpNorth(Cell currentCell)
+
+    // UpNorth
+    public class UpNorth : Rule
     {
-        var upperNorth = grid.UN(currentCell);
-        var up = grid.U(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var bottom = grid.B(currentCell);
+        public UpNorth() { action = Action.UpNorth; }
 
-        var middleSouth = grid.MS(currentCell);
-        var upperSouth = grid.US(currentCell);
-        var up2 = grid.Cells[currentCell.Location.x, currentCell.Location.y + 2, currentCell.Location.z];
-        var up2North = grid.Cells[currentCell.Location.x, currentCell.Location.y + 2, currentCell.Location.z + 1];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperNorth(); }
 
-        if (TargetCellUnoccupied(upperNorth) &&
-            TransitionCellUnoccupied(up) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleNorth) ||
-             ConnectorCellsExist_Concave(middleSouth, upperSouth, up2, up2North)) &&
-            (bottom == null || bottom.Alive == false))
 
-            return Action.UpNorth;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperNorth = targetCell;
+            var up = currentCell.Up();
+            var middleNorth = currentCell.MiddleNorth();
+
+            var middleSouth = currentCell.MiddleSouth();
+            var upperSouth = currentCell.UpperSouth();
+            var up2 = currentCell.Up2();
+            var up2North = currentCell.Up2North();
+
+            if (TargetCellUnoccupied(upperNorth) &&
+                TransitionCellUnoccupied(up) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleNorth) ||
+                 ConnectorCellsExist_Concave(middleSouth, upperSouth, up2, up2North)))
+
+                return Action.UpNorth;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action DownNorth(Cell currentCell)
+    // DownNorth
+    public class DownNorth : Rule
     {
-        var bottomNorth = grid.BN(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
+        public DownNorth() { action = Action.DownNorth; }
 
-        var middleSouth = grid.MS(currentCell);
-        var bottomSouth = grid.BS(currentCell);
-        var bottom2 = grid.Cells[currentCell.Location.x, currentCell.Location.y - 2, currentCell.Location.z];
-        var bottom2North = grid.Cells[currentCell.Location.x, currentCell.Location.y - 2, currentCell.Location.z + 1];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomNorth(); }
 
-        if (TargetCellUnoccupied(bottomNorth) &&
-            TransitionCellUnoccupied(bottom) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleNorth) ||
-             ConnectorCellsExist_Concave(middleSouth, bottomSouth, bottom2, bottom2North)) &&
-            (up == null || up.Alive == false))
 
-            return Action.DownNorth;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomNorth = targetCell;
+            var middleNorth = currentCell.MiddleNorth();
+            var bottom = currentCell.Bottom();
+
+            var middleSouth = currentCell.MiddleSouth();
+            var bottomSouth = currentCell.BottomSouth();
+            var bottom2 = currentCell.Bottom2();
+            var bottom2North = currentCell.Bottom2North();
+
+            if (TargetCellUnoccupied(bottomNorth) &&
+                TransitionCellUnoccupied(bottom) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleNorth) ||
+                 ConnectorCellsExist_Concave(middleSouth, bottomSouth, bottom2, bottom2North)))
+
+                return Action.DownNorth;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action NorthUp(Cell currentCell)
+    // NorthUp
+    public class NorthUp : Rule
     {
-        var upperNorth = grid.UN(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var up = grid.U(currentCell);
+        public NorthUp() { action = Action.NorthUp; }
 
-        var bottom = grid.B(currentCell);
-        var bottomNorth = grid.BN(currentCell);
-        var north2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z + 2];
-        var upperNorth2 = grid.Cells[currentCell.Location.x, currentCell.Location.y + 1, currentCell.Location.z + 2];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperNorth(); }
 
-        if (TargetCellUnoccupied(upperNorth) &&
-            TransitionCellUnoccupied(middleNorth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(up) ||
-             ConnectorCellsExist_Concave(bottom, bottomNorth, north2, upperNorth2)) &&
-            (middleSouth == null || middleSouth.Alive == false))
 
-            return Action.NorthUp;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperNorth = targetCell;
+            var middleNorth = currentCell.MiddleNorth();
+            var up = currentCell.Up();
+
+            var bottom = currentCell.Bottom();
+            var bottomNorth = currentCell.BottomNorth();
+            var north2 = currentCell.North2();
+            var upperNorth2 = currentCell.UpperNorth2();
+
+            if (TargetCellUnoccupied(upperNorth) &&
+                TransitionCellUnoccupied(middleNorth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(up) ||
+                 ConnectorCellsExist_Concave(bottom, bottomNorth, north2, upperNorth2)))
+
+                return Action.NorthUp;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action NorthDown(Cell currentCell)
+    // NorthDown
+    public class NorthDown : Rule
     {
-        var bottomNorth = grid.BN(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var bottom = grid.B(currentCell);
+        public NorthDown() { action = Action.NorthDown; }
 
-        var up = grid.U(currentCell);
-        var upperNorth = grid.UN(currentCell);
-        var north2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z + 2];
-        var bottomNorth2 = grid.Cells[currentCell.Location.x, currentCell.Location.y - 1, currentCell.Location.z + 2];
-
-        if (TargetCellUnoccupied(bottomNorth) && 
-            TransitionCellUnoccupied(middleNorth) && 
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(bottom) ||
-             ConnectorCellsExist_Concave(up, upperNorth, north2, bottomNorth2)) &&
-            (middleSouth == null || middleSouth.Alive == false))
-
-            return Action.NorthDown; 
-        else
-            return Action.NoAction;
-    }
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomNorth(); }
 
 
-    public Action UpSouth(Cell currentCell)
-    {
-        var upperSouth = grid.US(currentCell);
-        var up = grid.U(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var bottom = grid.B(currentCell);
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomNorth = targetCell;
+            var middleNorth = currentCell.MiddleNorth();
+            var bottom = currentCell.Bottom();
 
-        var middleNorth = grid.MN(currentCell);
-        var upperNorth = grid.UN(currentCell);
-        var up2 = grid.Cells[currentCell.Location.x, currentCell.Location.y + 2, currentCell.Location.z];
-        var up2South = grid.Cells[currentCell.Location.x, currentCell.Location.y + 2, currentCell.Location.z - 1];
+            var up = currentCell.Up();
+            var upperNorth = currentCell.UpperNorth();
+            var north2 = currentCell.North2();
+            var bottomNorth2 = currentCell.BottomNorth2();
 
-        if (TargetCellUnoccupied(upperSouth) &&
-            TransitionCellUnoccupied(up) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleSouth) ||
-             ConnectorCellsExist_Concave(middleNorth, upperNorth, up2, up2South)) &&
-            (bottom == null || bottom.Alive == false))
+            if (TargetCellUnoccupied(bottomNorth) &&
+                TransitionCellUnoccupied(middleNorth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(bottom) ||
+                 ConnectorCellsExist_Concave(up, upperNorth, north2, bottomNorth2)))
 
-            return Action.UpSouth;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action DownSouth(Cell currentCell)
-    {
-        var bottomSouth = grid.BS(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
-
-        var middleNorth = grid.MN(currentCell);
-        var bottomNorth = grid.BN(currentCell);
-        var bottom2 = grid.Cells[currentCell.Location.x, currentCell.Location.y - 2, currentCell.Location.z];
-        var bottom2South = grid.Cells[currentCell.Location.x, currentCell.Location.y - 2, currentCell.Location.z - 1];
-
-        if (TargetCellUnoccupied(bottomSouth) &&
-            TransitionCellUnoccupied(bottom) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleSouth) ||
-             ConnectorCellsExist_Concave(middleNorth, bottomNorth, bottom2, bottom2South)) &&
-            (up == null || up.Alive == false))
-
-            return Action.DownSouth;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action SouthUp(Cell currentCell)
-    {
-        var upperSouth = grid.US(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var up = grid.U(currentCell);
-
-        var bottom = grid.B(currentCell);
-        var bottomSouth = grid.BS(currentCell);
-        var south2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z - 2];
-        var upperSouth2 = grid.Cells[currentCell.Location.x, currentCell.Location.y + 1, currentCell.Location.z - 2];
-
-        if (TargetCellUnoccupied(upperSouth) &&
-            TransitionCellUnoccupied(middleSouth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(up) ||
-             ConnectorCellsExist_Concave(bottom, bottomSouth, south2, upperSouth2)) &&
-            (middleNorth == null || middleNorth.Alive == false))
-
-            return Action.SouthUp;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action SouthDown(Cell currentCell)
-    {
-        var bottomSouth = grid.BS(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var bottom = grid.B(currentCell);
-
-        var up = grid.U(currentCell);
-        var upperSouth = grid.US(currentCell);
-        var south2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z - 2];
-        var bottomSouth2 = grid.Cells[currentCell.Location.x, currentCell.Location.y - 1, currentCell.Location.z - 2];
-
-        if (TargetCellUnoccupied(bottomSouth) &&
-            TransitionCellUnoccupied(middleSouth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(bottom) ||
-             ConnectorCellsExist_Concave(up, upperSouth, south2, bottomSouth2)) &&
-            (middleNorth == null || middleNorth.Alive == false))
-
-            return Action.SouthDown;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action UpEast(Cell currentCell)
-    {
-        var upperEast = grid.UE(currentCell);
-        var up = grid.U(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var bottom = grid.B(currentCell);
-
-        var middleWest = grid.MW(currentCell);
-        var upperWest = grid.UW(currentCell);
-        var up2 = grid.Cells[currentCell.Location.x, currentCell.Location.y + 2, currentCell.Location.z];
-        var up2East = grid.Cells[currentCell.Location.x + 1, currentCell.Location.y + 2, currentCell.Location.z];
-
-        if (TargetCellUnoccupied(upperEast) &&
-            TransitionCellUnoccupied(up) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleEast) ||
-             ConnectorCellsExist_Concave(middleWest, upperWest, up2, up2East)) &&
-            (bottom == null || bottom.Alive == false))
-
-            return Action.UpEast;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action DownEast(Cell currentCell)
-    {
-        var bottomEast = grid.BE(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
-
-        var middleWest = grid.MW(currentCell);
-        var bottomWest = grid.BW(currentCell);
-        var bottom2 = grid.Cells[currentCell.Location.x, currentCell.Location.y - 2, currentCell.Location.z];
-        var bottom2East = grid.Cells[currentCell.Location.x + 1, currentCell.Location.y - 2, currentCell.Location.z];
-
-        if (TargetCellUnoccupied(bottomEast) &&
-            TransitionCellUnoccupied(bottom) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleEast) ||
-             ConnectorCellsExist_Concave(middleWest, bottomWest, bottom2, bottom2East)) &&
-            (up == null || up.Alive == false))
-
-            return Action.DownEast;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action EastUp(Cell currentCell)
-    {
-        var upperEast = grid.UE(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var up = grid.U(currentCell);
-
-        var bottom = grid.B(currentCell);
-        var bottomEast = grid.BE(currentCell);
-        var east2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y, currentCell.Location.z];
-        var upperEast2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y + 1, currentCell.Location.z];
-
-        if (TargetCellUnoccupied(upperEast) &&
-            TransitionCellUnoccupied(middleEast) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(up) ||
-             ConnectorCellsExist_Concave(bottom, bottomEast, east2, upperEast2)) &&
-            (middleWest == null || middleWest.Alive == false))
-
-            return Action.EastUp;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action EastDown(Cell currentCell)
-    {
-        var bottomEast = grid.BE(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var bottom = grid.B(currentCell);
-
-        var up = grid.U(currentCell);
-        var upperEast = grid.UE(currentCell);
-        var east2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y, currentCell.Location.z];
-        var bottomEast2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y - 1, currentCell.Location.z];
-
-        if (TargetCellUnoccupied(bottomEast) &&
-            TransitionCellUnoccupied(middleEast) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(bottom) ||
-             ConnectorCellsExist_Concave(up, upperEast, east2, bottomEast2)) &&
-            (middleWest == null || middleWest.Alive == false))
-
-            return Action.EastDown;
-        else
-            return Action.NoAction;
+                return Action.NorthDown;
+            else
+                return Action.NoAction;
+        }
     }
 
 
 
-    public Action UpWest(Cell currentCell)
+    // UpSouth
+    public class UpSouth : Rule
     {
-        var upperWest = grid.UW(currentCell);
-        var up = grid.U(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var bottom = grid.B(currentCell);
+        public UpSouth() { action = Action.UpSouth; }
 
-        var middleEast = grid.ME(currentCell);
-        var upperEast = grid.UE(currentCell);
-        var up2 = grid.Cells[currentCell.Location.x, currentCell.Location.y + 2, currentCell.Location.z];
-        var up2West = grid.Cells[currentCell.Location.x - 1, currentCell.Location.y + 2, currentCell.Location.z];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperSouth(); }
 
-        if (TargetCellUnoccupied(upperWest) &&
-            TransitionCellUnoccupied(up) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleWest) ||
-             ConnectorCellsExist_Concave(middleEast, upperEast, up2, up2West)) &&
-            (bottom == null || bottom.Alive == false))
 
-            return Action.UpWest;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperSouth = targetCell;
+            var up = currentCell.Up();
+            var middleSouth = currentCell.MiddleSouth();
+
+            var middleNorth = currentCell.MiddleNorth();
+            var upperNorth = currentCell.UpperNorth();
+            var up2 = currentCell.Up2();
+            var up2South = currentCell.Up2South();
+
+            if (TargetCellUnoccupied(upperSouth) &&
+                TransitionCellUnoccupied(up) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleSouth) ||
+                 ConnectorCellsExist_Concave(middleNorth, upperNorth, up2, up2South)))
+
+                return Action.UpSouth;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // DownSouth
+    public class DownSouth : Rule
+    {
+        public DownSouth() { action = Action.DownSouth; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomSouth(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomSouth = targetCell;
+            var middleSouth = currentCell.MiddleSouth();
+            var bottom = currentCell.Bottom();
+
+            var middleNorth = currentCell.MiddleNorth();
+            var bottomNorth = currentCell.BottomNorth();
+            var bottom2 = currentCell.Bottom2();
+            var bottom2South = currentCell.Bottom2South();
+
+            if (TargetCellUnoccupied(bottomSouth) &&
+                TransitionCellUnoccupied(bottom) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleSouth) ||
+                 ConnectorCellsExist_Concave(middleNorth, bottomNorth, bottom2, bottom2South)))
+
+                return Action.DownSouth;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // SouthUp
+    public class SouthUp : Rule
+    {
+        public SouthUp() { action = Action.SouthUp; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperSouth(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperSouth = targetCell;
+            var middleSouth = currentCell.MiddleSouth();
+            var up = currentCell.Up();
+
+            var bottom = currentCell.Bottom();
+            var bottomSouth = currentCell.BottomSouth();
+            var south2 = currentCell.South2();
+            var upperSouth2 = currentCell.UpperSouth2();
+
+            if (TargetCellUnoccupied(upperSouth) &&
+                TransitionCellUnoccupied(middleSouth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(up) ||
+                 ConnectorCellsExist_Concave(bottom, bottomSouth, south2, upperSouth2)))
+
+                return Action.SouthUp;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // SouthDown
+    public class SouthDown : Rule
+    {
+        public SouthDown() { action = Action.SouthDown; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomSouth(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomSouth = targetCell;
+            var middleSouth = currentCell.MiddleSouth();
+            var bottom = currentCell.Bottom();
+
+            var up = currentCell.Up();
+            var upperSouth = currentCell.UpperSouth();
+            var south2 = currentCell.South2();
+            var bottomSouth2 = currentCell.BottomSouth2();
+
+            if (TargetCellUnoccupied(bottomSouth) &&
+                TransitionCellUnoccupied(middleSouth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(bottom) ||
+                 ConnectorCellsExist_Concave(up, upperSouth, south2, bottomSouth2)))
+
+                return Action.SouthDown;
+            else
+                return Action.NoAction;
+        }
     }
 
 
-    public Action DownWest(Cell currentCell)
+
+    // UpEast
+    public class UpEast : Rule
     {
-        var bottomWest = grid.BW(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var bottom = grid.B(currentCell);
-        var up = grid.U(currentCell);
+        public UpEast() { action = Action.UpEast; }
 
-        var middleEast = grid.ME(currentCell);
-        var bottomEast = grid.BE(currentCell);
-        var bottom2 = grid.Cells[currentCell.Location.x, currentCell.Location.y - 2, currentCell.Location.z];
-        var bottom2West = grid.Cells[currentCell.Location.x - 1, currentCell.Location.y - 2, currentCell.Location.z];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperEast(); }
 
-        if (TargetCellUnoccupied(bottomWest) &&
-            TransitionCellUnoccupied(bottom) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleWest) ||
-             ConnectorCellsExist_Concave(middleEast, bottomEast, bottom2, bottom2West)) &&
-            (up == null || up.Alive == false))
 
-            return Action.DownWest;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperEast = targetCell;
+            var up = currentCell.Up();
+            var middleEast = currentCell.MiddleEast();
+
+            var middleWest = currentCell.MiddleWest();
+            var upperWest = currentCell.UpperWest();
+            var up2 = currentCell.Up2();
+            var up2East = currentCell.Up2East();
+
+            if (TargetCellUnoccupied(upperEast) &&
+                TransitionCellUnoccupied(up) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleEast) ||
+                 ConnectorCellsExist_Concave(middleWest, upperWest, up2, up2East)))
+
+                return Action.UpEast;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // DownEast
+    public class DownEast : Rule
+    {
+        public DownEast() { action = Action.DownEast; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomEast(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomEast = targetCell;
+            var middleEast = currentCell.MiddleEast();
+            var bottom = currentCell.Bottom();
+
+            var middleWest = currentCell.MiddleWest();
+            var bottomWest = currentCell.BottomWest();
+            var bottom2 = currentCell.Bottom2();
+            var bottom2East = currentCell.Bottom2East();
+
+            if (TargetCellUnoccupied(bottomEast) &&
+                TransitionCellUnoccupied(bottom) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleEast) ||
+                 ConnectorCellsExist_Concave(middleWest, bottomWest, bottom2, bottom2East)))
+
+                return Action.DownEast;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // EastUp
+    public class EastUp : Rule
+    {
+        public EastUp() { action = Action.EastUp; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperEast(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperEast = targetCell;
+            var middleEast = currentCell.MiddleEast();
+            var up = currentCell.Up();
+
+            var bottom = currentCell.Bottom();
+            var bottomEast = currentCell.BottomEast();
+            var east2 = currentCell.East2();
+            var upperEast2 = currentCell.UpperEast2();
+
+            if (TargetCellUnoccupied(upperEast) &&
+                TransitionCellUnoccupied(middleEast) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(up) ||
+                 ConnectorCellsExist_Concave(bottom, bottomEast, east2, upperEast2)))
+
+                return Action.EastUp;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // EastDown
+    public class EastDown : Rule
+    {
+        public EastDown() { action = Action.EastDown; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomEast(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomEast = currentCell.BottomEast();
+            var middleEast = currentCell.MiddleEast();
+            var bottom = currentCell.Bottom();
+
+            var up = currentCell.Up();
+            var upperEast = currentCell.UpperEast();
+            var east2 = currentCell.East2();
+            var bottomEast2 = currentCell.BottomEast2();
+
+            if (TargetCellUnoccupied(bottomEast) &&
+                TransitionCellUnoccupied(middleEast) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(bottom) ||
+                 ConnectorCellsExist_Concave(up, upperEast, east2, bottomEast2)))
+
+                return Action.EastDown;
+            else
+                return Action.NoAction;
+        }
     }
 
 
-    public Action WestUp(Cell currentCell)
+
+    // UpWest
+    public class UpWest : Rule
     {
-        var upperWest = grid.UE(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var up = grid.U(currentCell);
+        public UpWest() { action = Action.UpWest; }
 
-        var bottom = grid.B(currentCell);
-        var bottomWest = grid.BW(currentCell);
-        var west2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y, currentCell.Location.z];
-        var upperWest2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y + 1, currentCell.Location.z];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperWest(); }
 
-        if (TargetCellUnoccupied(upperWest) &&
-            TransitionCellUnoccupied(middleWest) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(up) ||
-             ConnectorCellsExist_Concave(bottom, bottomWest, west2, upperWest2)) &&
-            (middleEast == null || middleEast.Alive == false))
 
-            return Action.WestUp;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperWest = targetCell;
+            var up = currentCell.Up();
+            var middleWest = currentCell.MiddleWest();
+
+            var middleEast = currentCell.MiddleEast();
+            var upperEast = currentCell.UpperEast();
+            var up2 = currentCell.Up2();
+            var up2West = currentCell.Up2West();
+
+            if (TargetCellUnoccupied(upperWest) &&
+                TransitionCellUnoccupied(up) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleWest) ||
+                 ConnectorCellsExist_Concave(middleEast, upperEast, up2, up2West)))
+
+                return Action.UpWest;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // DownWest
+    public class DownWest : Rule
+    {
+        public DownWest() { action = Action.DownWest; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomWest(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomWest = targetCell;
+            var middleWest = currentCell.MiddleWest();
+            var bottom = currentCell.Bottom();
+
+            var middleEast = currentCell.MiddleEast();
+            var bottomEast = currentCell.BottomEast();
+            var bottom2 = currentCell.Bottom2();
+            var bottom2West = currentCell.Bottom2West();
+
+            if (TargetCellUnoccupied(bottomWest) &&
+                TransitionCellUnoccupied(bottom) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleWest) ||
+                 ConnectorCellsExist_Concave(middleEast, bottomEast, bottom2, bottom2West)))
+
+                return Action.DownWest;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // WestUp
+    public class WestUp : Rule
+    {
+        public WestUp() { action = Action.WestUp; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.UpperWest(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var upperWest = targetCell;
+            var middleWest = currentCell.MiddleWest();
+            var up = currentCell.Up();
+
+            var bottom = currentCell.Bottom();
+            var bottomWest = currentCell.BottomWest();
+            var west2 = currentCell.West2();
+            var upperWest2 = currentCell.UpperWest2();
+
+            if (TargetCellUnoccupied(upperWest) &&
+                TransitionCellUnoccupied(middleWest) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(up) ||
+                 ConnectorCellsExist_Concave(bottom, bottomWest, west2, upperWest2)))
+
+                return Action.WestUp;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // WestDown
+    public class WestDown : Rule
+    {
+        public WestDown() { action = Action.WestDown; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.BottomWest(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var bottomWest = targetCell;
+            var middleWest = currentCell.MiddleWest();
+            var bottom = currentCell.Bottom();
+
+            var up = currentCell.Up();
+            var upperWest = currentCell.UpperWest();
+            var west2 = currentCell.West2();
+            var bottomWest2 = currentCell.BottomWest2();
+
+            if (TargetCellUnoccupied(bottomWest) &&
+                TransitionCellUnoccupied(middleWest) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(bottom) ||
+                 ConnectorCellsExist_Concave(up, upperWest, west2, bottomWest2)))
+
+                return Action.EastDown;
+            else
+                return Action.NoAction;
+        }
     }
 
 
-    public Action WestDown(Cell currentCell)
+
+    // NorthEast
+    public class NorthEast : Rule
     {
-        var bottomWest = grid.BW(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var bottom = grid.B(currentCell);
+        public NorthEast() { action = Action.NorthEast; }
 
-        var up = grid.U(currentCell);
-        var upperWest = grid.UW(currentCell);
-        var west2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y, currentCell.Location.z];
-        var bottomWest2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y - 1, currentCell.Location.z];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleNorthEast(); }
 
-        if (TargetCellUnoccupied(bottomWest) &&
-            TransitionCellUnoccupied(middleWest) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(bottom) ||
-             ConnectorCellsExist_Concave(up, upperWest, west2, bottomWest2)) &&
-            (middleEast == null || middleEast.Alive == false))
 
-            return Action.EastDown;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var northEast = targetCell;
+            var middleNorth = currentCell.MiddleNorth();
+            var middleEast = currentCell.MiddleEast();
+
+            var middleWest = currentCell.MiddleWest();
+            var northWest = currentCell.MiddleNorthWest();
+            var north2 = currentCell.North2();
+            var north2East = currentCell.North2East();
+
+            if (TargetCellUnoccupied(northEast) &&
+                TransitionCellUnoccupied(middleNorth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleEast) ||
+                 ConnectorCellsExist_Concave(middleWest, northWest, north2, north2East)))
+
+                return Action.NorthEast;
+            else
+                return Action.NoAction;
+        }
     }
 
-   
-    public Action NorthEast(Cell currentCell)
+    // NorthWest
+    public class NorthWest : Rule
     {
-        var northEast = grid.MNE(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleSouth = grid.MS(currentCell);
+        public NorthWest() { action = Action.NorthWest; }
 
-        var middleWest = grid.MW(currentCell);
-        var northWest = grid.MNW(currentCell);
-        var north2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z + 2];
-        var north2East = grid.Cells[currentCell.Location.x + 1, currentCell.Location.y, currentCell.Location.z + 2];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleNorthWest(); }
 
-        if (TargetCellUnoccupied(northEast) &&
-            TransitionCellUnoccupied(middleNorth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleEast) ||
-             ConnectorCellsExist_Concave(middleWest, northWest, north2, north2East)) &&
-            (middleSouth == null || middleSouth.Alive == false))
 
-            return Action.NorthEast;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var northWest = targetCell;
+            var middleNorth = currentCell.MiddleNorth();
+            var middleWest = currentCell.MiddleWest();
+
+            var middleEast = currentCell.MiddleEast();
+            var northEast = currentCell.MiddleNorthEast();
+            var north2 = currentCell.North2();
+            var north2West = currentCell.North2West();
+
+            if (TargetCellUnoccupied(northWest) &&
+                TransitionCellUnoccupied(middleNorth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleWest) ||
+                 ConnectorCellsExist_Concave(middleEast, northEast, north2, north2West)))
+
+                return Action.NorthWest;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action NorthWest(Cell currentCell)
+    // EastNorth
+    public class EastNorth : Rule
     {
-        var northWest = grid.MNW(currentCell);
-        var middleNorth = grid.MN(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleSouth = grid.MS(currentCell);
+        public EastNorth() { action = Action.EastNorth; }
 
-        var middleEast = grid.ME(currentCell);
-        var northEast = grid.MNE(currentCell);
-        var north2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z + 2];
-        var north2West = grid.Cells[currentCell.Location.x - 1, currentCell.Location.y, currentCell.Location.z + 2];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleNorthEast(); }
 
-        if (TargetCellUnoccupied(northWest) &&
-            TransitionCellUnoccupied(middleNorth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleWest) ||
-             ConnectorCellsExist_Concave(middleEast, northEast, north2, north2West)) &&
-            (middleSouth == null || middleSouth.Alive == false))
 
-            return Action.NorthWest;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var northEast = targetCell;
+            var middleEast = currentCell.MiddleEast();
+            var middleNorth = currentCell.MiddleNorth();
+
+            var middleSouth = currentCell.MiddleSouth();
+            var southEast = currentCell.MiddleSouthEast();
+            var east2 = currentCell.East2();
+            var northEast2 = currentCell.NorthEast2();
+
+            if (TargetCellUnoccupied(northEast) &&
+                TransitionCellUnoccupied(middleEast) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleNorth) ||
+                 ConnectorCellsExist_Concave(middleSouth, southEast, east2, northEast2)))
+
+                return Action.EastNorth;
+            else
+                return Action.NoAction;
+        }
     }
 
-
-    public Action EastNorth(Cell currentCell)
+    // WestNorth
+    public class WestNorth : Rule
     {
-        var northEast = grid.MNE(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleNorth = grid.MN(currentCell);
+        public WestNorth() { action = Action.WestNorth; }
 
-        var middleSouth = grid.MS(currentCell);
-        var southEast = grid.MSE(currentCell);
-        var east2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y, currentCell.Location.z];
-        var northEast2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y, currentCell.Location.z + 1];
-
-        if (TargetCellUnoccupied(northEast) &&
-            TransitionCellUnoccupied(middleEast) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleNorth) ||
-             ConnectorCellsExist_Concave(middleSouth, southEast, east2, northEast2)) &&
-            (middleWest == null || middleWest.Alive == false))
-
-            return Action.EastNorth;
-        else
-            return Action.NoAction;
-    }
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleNorthWest(); }
 
 
-    public Action WestNorth(Cell currentCell)
-    {
-        var northWest = grid.MNW(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleNorth = grid.MN(currentCell);
+        public override Action CheckAction(Cell currentCell)
+        {
+            var northWest = targetCell;
+            var middleWest = currentCell.MiddleWest();
+            var middleNorth = currentCell.MiddleNorth();
 
-        var middleSouth = grid.MS(currentCell);
-        var southWest = grid.MSW(currentCell);
-        var west2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y, currentCell.Location.z];
-        var northWest2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y, currentCell.Location.z + 1];
+            var middleSouth = currentCell.MiddleSouth();
+            var southWest = currentCell.MiddleSouthWest();
+            var west2 = currentCell.West2();
+            var northWest2 = currentCell.NorthWest2();
 
-        if (TargetCellUnoccupied(northWest) &&
-            TransitionCellUnoccupied(middleWest) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleNorth) ||
-             ConnectorCellsExist_Concave(middleSouth, southWest, west2, northWest2)) &&
-            (middleEast == null || middleEast.Alive == false))
+            if (TargetCellUnoccupied(northWest) &&
+                TransitionCellUnoccupied(middleWest) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleNorth) ||
+                 ConnectorCellsExist_Concave(middleSouth, southWest, west2, northWest2)))
 
-            return Action.WestNorth;
-        else
-            return Action.NoAction;
-    }
-
-
-    public Action SouthEast(Cell currentCell)
-    {
-        var southEast = grid.MNE(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleNorth = grid.MN(currentCell);
-
-        var middleWest = grid.MW(currentCell);
-        var southWest = grid.MSW(currentCell);
-        var south2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z - 2];
-        var south2East = grid.Cells[currentCell.Location.x + 1, currentCell.Location.y, currentCell.Location.z - 2];
-
-        if (TargetCellUnoccupied(southEast) &&
-            TransitionCellUnoccupied(middleSouth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleEast) ||
-             ConnectorCellsExist_Concave(middleWest, southWest, south2, south2East)) &&
-            (middleNorth == null || middleNorth.Alive == false))
-
-            return Action.SouthEast;
-        else
-            return Action.NoAction;
+                return Action.WestNorth;
+            else
+                return Action.NoAction;
+        }
     }
 
 
-    public Action SouthWest(Cell currentCell)
+
+    // SouthEast
+    public class SouthEast : Rule
     {
-        var southWest = grid.MSW(currentCell);
-        var middleSouth = grid.MS(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleNorth = grid.MN(currentCell);
+        public SouthEast() { action = Action.SouthEast; }
 
-        var middleEast = grid.ME(currentCell);
-        var southEast = grid.MSE(currentCell);
-        var south2 = grid.Cells[currentCell.Location.x, currentCell.Location.y, currentCell.Location.z - 2];
-        var south2West = grid.Cells[currentCell.Location.x - 1, currentCell.Location.y, currentCell.Location.z - 2];
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleSouthEast(); }
 
-        if (TargetCellUnoccupied(southWest) &&
-            TransitionCellUnoccupied(middleSouth) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleWest) ||
-             ConnectorCellsExist_Concave(middleEast, southEast, south2, south2West)) &&
-            (middleNorth == null || middleNorth.Alive == false))
 
-            return Action.SouthWest;
-        else
-            return Action.NoAction;
+        public override Action CheckAction(Cell currentCell)
+        {
+            var southEast = targetCell;
+            var middleSouth = currentCell.MiddleSouth();
+            var middleEast = currentCell.MiddleEast();
+
+            var middleWest = currentCell.MiddleWest();
+            var southWest = currentCell.MiddleSouthWest();
+            var south2 = currentCell.South2();
+            var south2East = currentCell.South2East();
+
+            if (TargetCellUnoccupied(southEast) &&
+                TransitionCellUnoccupied(middleSouth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleEast) ||
+                 ConnectorCellsExist_Concave(middleWest, southWest, south2, south2East)))
+
+                return Action.SouthEast;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // SouthWest
+    public class SouthWest : Rule
+    {
+        public SouthWest() { action = Action.SouthWest; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleSouthWest(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var southWest = targetCell;
+            var middleSouth = currentCell.MiddleSouth();
+            var middleWest = currentCell.MiddleWest();
+
+            var middleEast = currentCell.MiddleEast();
+            var southEast = currentCell.MiddleSouthEast();
+            var south2 = currentCell.South2();
+            var south2West = currentCell.South2West();
+
+            if (TargetCellUnoccupied(southWest) &&
+                TransitionCellUnoccupied(middleSouth) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleWest) ||
+                 ConnectorCellsExist_Concave(middleEast, southEast, south2, south2West)))
+
+                return Action.SouthWest;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // EastSouth
+    public class EastSouth : Rule
+    {
+        public EastSouth() { action = Action.EastSouth; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleSouthEast(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var southEast = targetCell;
+            var middleEast = currentCell.MiddleEast();
+            var middleSouth = currentCell.MiddleSouth();
+
+            var middleNorth = currentCell.MiddleNorth();
+            var northEast = currentCell.MiddleNorthEast();
+            var east2 = currentCell.East2();
+            var southEast2 = currentCell.SouthEast2();
+
+            if (TargetCellUnoccupied(southEast) &&
+                TransitionCellUnoccupied(middleEast) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleSouth) ||
+                 ConnectorCellsExist_Concave(middleNorth, northEast, east2, southEast2)))
+
+                return Action.EastSouth;
+            else
+                return Action.NoAction;
+        }
+    }
+
+    // WestSouth
+    public class WestSouth : Rule
+    {
+        public WestSouth() { action = Action.WestSouth; }
+
+        public override void SetTargetCell(Cell currentCell) { targetCell = currentCell.MiddleSouthWest(); }
+
+
+        public override Action CheckAction(Cell currentCell)
+        {
+            var southWest = targetCell;
+            var middleWest = currentCell.MiddleWest();
+            var middleSouth = currentCell.MiddleSouth();
+
+            var middleNorth = currentCell.MiddleNorth();
+            var northWest = currentCell.MiddleNorthWest();
+            var west2 = currentCell.West2();
+            var southWest2 = currentCell.SouthWest2();
+
+            if (TargetCellUnoccupied(southWest) &&
+                TransitionCellUnoccupied(middleWest) &&
+                PotentialDisconnections(currentCell) == false &&
+                (ConnectorCellExists_Convex(middleSouth) ||
+                 ConnectorCellsExist_Concave(middleNorth, northWest, west2, southWest2)))
+
+                return Action.WestSouth;
+            else
+                return Action.NoAction;
+        }
     }
 
 
-    public Action EastSouth(Cell currentCell)
-    {
-        var southEast = grid.MSE(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleSouth = grid.MS(currentCell);
-
-        var middleNorth = grid.MN(currentCell);
-        var northEast = grid.MNE(currentCell);
-        var east2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y, currentCell.Location.z];
-        var southEast2 = grid.Cells[currentCell.Location.x + 2, currentCell.Location.y, currentCell.Location.z - 1];
-
-        if (TargetCellUnoccupied(southEast) &&
-            TransitionCellUnoccupied(middleEast) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleSouth) ||
-             ConnectorCellsExist_Concave(middleNorth, northEast, east2, southEast2)) &&
-            (middleWest == null || middleWest.Alive == false))
-
-            return Action.EastSouth;
-        else
-            return Action.NoAction;
-    }
 
 
-    public Action WestSouth(Cell currentCell)
-    {
-        var southWest = grid.MSW(currentCell);
-        var middleWest = grid.MW(currentCell);
-        var middleEast = grid.ME(currentCell);
-        var middleSouth = grid.MS(currentCell);
-
-        var middleNorth = grid.MN(currentCell);
-        var northWest = grid.MNW(currentCell);
-        var west2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y, currentCell.Location.z];
-        var southWest2 = grid.Cells[currentCell.Location.x - 2, currentCell.Location.y, currentCell.Location.z - 1];
-
-        if (TargetCellUnoccupied(southWest) &&
-            TransitionCellUnoccupied(middleWest) &&
-            PotentialDisconnections(currentCell) == false &&
-            (ConnectorCellExists_Convex(middleSouth) ||
-             ConnectorCellsExist_Concave(middleNorth, northWest, west2, southWest2)) &&
-            (middleEast == null || middleEast.Alive == false))
-
-            return Action.WestSouth;
-        else
-            return Action.NoAction;
-    }
 
 
 
@@ -1146,7 +1401,9 @@ public class ReconfigurationRules
         agent.Location = targetCell;
 
         currentCell.Alive = false;
+        currentCell.agent = null;
         targetCell.Alive = true;
+        targetCell.agent = agent;
 
         yield return new WaitForSeconds(speed);
     }
@@ -1160,19 +1417,22 @@ public class ReconfigurationRules
         agent.Location = transitionCell;
 
         currentCell.Alive = false;
+        currentCell.agent = null;
         transitionCell.Alive = true;
+        transitionCell.agent = agent;
 
-        yield return new WaitForSeconds(speed);
+        yield return null; //new WaitForSeconds(speed);
 
 
         agent.Obj.transform.Translate(direction2 * CellSize);
         agent.Location = targetCell;
 
         transitionCell.Alive = false;
+        transitionCell.agent = null;
         targetCell.Alive = true;
+        targetCell.agent = agent;
 
         yield return new WaitForSeconds(speed);
     }
-
 
 }

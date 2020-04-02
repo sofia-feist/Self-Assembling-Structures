@@ -1,13 +1,7 @@
 ﻿using UnityEngine;
 
 public class MainCamera : MonoBehaviour
-{
-    SpeedSlider slider;
-
-    int AreaMin;
-    int AreaMax;
-    int AreaWidth;
-
+{  
     const float rotateSpeed = 4.0f;
     const float panSpeed = 2.5f;
 
@@ -15,37 +9,55 @@ public class MainCamera : MonoBehaviour
     Plane XZplane;
     float enter;
      
+    static Vector3 CameraPosition;
+    static Quaternion CameraRotation;
+
     Vector3 zoomTarget;
-    Vector3 rotateTarget;      //Center of the structure?
+    Vector3 rotateTarget;     
     
 
     void Start()
     {
-        slider = FindObjectOfType(typeof(SpeedSlider)) as SpeedSlider;
-
-
-        // CAMERA START POSITION
-        AreaMin = _3DSelfAssembly.AreaMin;
-        AreaMax = _3DSelfAssembly.AreaMax;
-        AreaWidth = Mathf.Abs(AreaMax - AreaMin);
-        float AreaMiddle = AreaMin + AreaWidth * 0.5f;
-        this.transform.position = new Vector3(AreaMiddle, AreaMax, AreaMiddle);
-
-
-
-        XZplane = new Plane(Vector3.up, new Vector3(AreaMiddle, AreaMin, AreaMiddle));
-        //rotateTarget = new Vector3(AreaMiddle, AreaMiddle, AreaMiddle);                 // CORRIGIR
-        rotateTarget = new Vector3(AreaMiddle, AreaMin, AreaMiddle);
+        XZplane = new Plane(Vector3.up, Vector3.zero);
+        rotateTarget = Vector3.zero;                     // FIX(?): rotateTarget in center of the structure?  
     }
+
+
+
+
+    // CAMERA START POSITION
+    public void SetCameraPosition(int AreaMin, int AreaMax)
+    {
+        int AreaWidth = Mathf.Abs(AreaMax - AreaMin);
+        float AreaMiddle = AreaMin + AreaWidth * 0.5f;
+
+        if (GUI.Reset != true)
+        {
+            CameraPosition = new Vector3(AreaMiddle, AreaMax, AreaMiddle);
+            transform.position = CameraPosition;
+        }
+        else
+        {
+            transform.position = CameraPosition;
+            transform.rotation = CameraRotation;
+        }
+    }
+
+
+
+
 
     void Update()
     {
+        CameraPosition = this.transform.position;
+        CameraRotation = this.transform.rotation;
+
 
         ///////////////////////////////////////
 
         // PAN
 
-        bool pan = Input.GetMouseButton(0) && slider.isBeingDragged == false;
+        bool pan = Input.GetMouseButton(0) && UIElements.isBeingDragged == false;
 
         if (pan)
         {
@@ -95,4 +107,6 @@ public class MainCamera : MonoBehaviour
             transform.Translate(direction.normalized * distance, Space.World);
         }
     }
+
+
 }
