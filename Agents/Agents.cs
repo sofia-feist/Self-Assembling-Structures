@@ -32,6 +32,7 @@ public class Agents
 
 
 
+
     ////////////////////////////   CELL PLACEMENT METHODS  ////////////////////////////
 
     // FillCellsWithAgents: Fills the entire grid of cells with agents (For a Self-Disassembly Process?)
@@ -77,7 +78,7 @@ public class Agents
             {
                 if (count < NumberOfAgents)
                 {
-                    Cell cell = _grid.Cells[i + placement.x, placement.y, j + placement.z];    // Check Exception if Outside Area Boundaries? -> Make 3D Rows instead
+                    Cell cell = _grid.Cells[i + placement.x, placement.y, j + placement.z]; 
                     cell.Alive = true;
 
                     Agent newAgent = new Agent(agent, material, cell.Center);
@@ -134,7 +135,7 @@ public class Agents
     // PlaceAgentsInGivenGeometry: Places the agents in a given list of points that forms a 3D shape (only for points inside the lattice)
     public Agent[] PlaceAgentsInGivenGeometry(IEnumerable<Vector3> listPositions)
     {
-        for (int i = 0; i < listPositions.Count(); i++)    // PROBLEM IF: NumAgents != listPositions.Count()
+        for (int i = 0; i < listPositions.Count(); i++)    // CHECK EXCEPTION: NumAgents != listPositions.Count()
         {
             Vector3Int cellLocation = _grid.GetCellLocation(listPositions.ElementAt(i));
 

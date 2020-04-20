@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -132,7 +131,7 @@ public class ReconfigurationRules
     public Action ChoseAction(Agent agent)
     {
         Action nextAction = Action.NoAction;
-        CM.RandomShuffle(ruleList);  //Is this Working properly?
+        CM.RandomShuffle(ruleList);
 
         List<Rule> rulesThatApply = new List<Rule>();
 
@@ -334,21 +333,26 @@ public class ReconfigurationRules
         {
             var FaceNeighbours = currentCell.GetFaceNeighbours().Where(n => n.Alive);
             var AllNeighbours = currentCell.GetAllNeighbours().Where(n => n.Alive);
-            var potentialCommonNeighbours = new List<Cell>();
 
             foreach (var neighbour in FaceNeighbours)
             {
                 var nNeighbours = neighbour.GetFaceNeighbours().Where(n => n.Alive);
-                potentialCommonNeighbours.AddRange(nNeighbours);
+                var adjacentNeighbours = FaceNeighbours.Where(n => n.Location != neighbour.Location && n.OppositeNeighbours(neighbour) == false);
 
-                if ((FaceNeighbours.Count() != 1 && nNeighbours.Count() == 1) ||        // If neighbour only has one face neighbour (aka current cell), DO NOT MOVE
-                    (FaceNeighbours.Count() == 2 && FaceNeighbours.ElementAt(0).OppositeNeighbours(FaceNeighbours.ElementAt(1))) ||  // If current cell only has two face neighbours on opposite faces, DO NOT MOVE
-                    (FaceNeighbours.Count() == 2 && AllNeighbours.Count() < 3))
-                    return true;
+                var potentialCommonNeighbours = new List<Cell>();
+                foreach (var n in adjacentNeighbours)
+                    potentialCommonNeighbours.AddRange(n.GetFaceNeighbours().Where(a => a.Alive));
+
+                var commonNeighbours = nNeighbours.Intersect(potentialCommonNeighbours).ToList();
+
+                if ((FaceNeighbours.Count() != 1 && nNeighbours.Count() == 1) ||                                                                         // If neighbour only has one face neighbour (aka current cell), DO NOT MOVE
+                    (FaceNeighbours.Count() == 2 && FaceNeighbours.ElementAt(0).OppositeNeighbours(FaceNeighbours.ElementAt(1))                          // If current cell only has two face neighbours on opposite faces, DO NOT MOVE (unless one of them is a final state agent or seed)
+                         && FaceNeighbours.All(n => n.agent.State == AgentState.Active || n.agent.State == AgentState.Inactive) 
+                         && Random.Range(0.0f, 1.0f) > 0.05) ||                                                                                      // This random range gives this condition a very small probability(5%) of being disregarded (-> TO AVOID LOCAL OPTIMA, although it also gives the structure a chance to disconnect)
+                    (FaceNeighbours.Count() > 1 && commonNeighbours.Count() == 1 && commonNeighbours.ElementAt(0).Location == currentCell.Location       // If current cell is the only cell in common between two face neighbours, DO NOT MOVE (unless one of them is a final state agent or seed)
+                         && FaceNeighbours.All(n => n.agent.State == AgentState.Active || n.agent.State == AgentState.Inactive)))
+                    return true;    
             }
-
-            if (FaceNeighbours.Count() > 1 && !potentialCommonNeighbours.GroupBy(n => n.Location).Any(g => g.Count() > 1 && g.Key != currentCell.Location)) // If current cell is the only cell in common between two face neighbours, DO NOT MOVE
-                return true;
 
             return false;
         }

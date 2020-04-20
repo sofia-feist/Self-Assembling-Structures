@@ -1,12 +1,15 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using static UnityEngine.Mathf;
 
 public class CommonMethods 
 {
+    
+    ////////////////////////   RANDOM SHUFFLE  ////////////////////////
 
 
-    // RandomShuffle: Fisher-Yates Shuffle algorithm; shuffles a list to randomly organize the its elements
+    // RandomShuffle(list): Fisher-Yates Shuffle algorithm; shuffles a list to randomly organize the its elements
     public void RandomShuffle<T>(List<T> list)
     {
         for (int i = 0; i < list.Count; i++)
@@ -19,7 +22,18 @@ public class CommonMethods
         }
     }
 
+    // RandomShuffle(array): Fisher-Yates Shuffle algorithm; shuffles an array to randomly organize the its elements
+    public void RandomShuffle<T>(T[] list)
+    {
+        for (int i = 0; i < list.Length; i++)
+        {
+            int j = i + Random.Range(0, list.Length - i);
 
+            T temp = list[j];
+            list[j] = list[i];
+            list[i] = temp;
+        }
+    }
 
 
 
@@ -43,29 +57,127 @@ public class CommonMethods
     }
 
 
-    // InsideCollider: Checks if a given point is inside a collider
-    public bool InsideCollider(Vector3 point, Vector3 rayPosition)
+
+
+    ////////////////////////   GOAL SHAPE SETUP  ////////////////////////
+
+
+    // PointsFromGeometry: Calculates the target points for the Self-Assembly Algorithm from an 3D geometric input
+    public IEnumerable<Vector3> PointsFromGeometry(GameObject geometry)
     {
-        Physics.queriesHitBackfaces = true;    // IMPLEMENT!!!
+        SetupColliders(geometry);
+
+        Bounds size = GeometrySize(geometry);
+        Vector3 min = size.min;
+        Vector3 max = size.max;
+
+        for (float y = min.y + 0.5f; y < max.y; y++)
+        {
+            for (float z = min.z + 0.5f; z < max.z; z++)
+            {
+                for (float x = min.x + 0.5f; x < max.x; x++)
+                {
+                    Vector3 point = new Vector3(x, y, z);
+
+                    if (InsideCollider(point, Vector3.down))                  // CONTROL Nº OF POINTS (aka GOAL CELLS) ACC TO Nº of AGENTS?  -  MORE AGENTS -> MORE RESOLUTION
+                        yield return point;
+                }
+            }
+        }
+    }
+
+
+    // SetupColliders: Adds Mesh Colliders to geometry and all children with a Mesh Filter
+    public void SetupColliders(GameObject geometry)
+    {
+        // Parent Geometry
+        MeshFilter parentMeshFilter = geometry.GetComponent<MeshFilter>();
+        MeshCollider parentCollider = geometry.GetComponent<MeshCollider>();
+
+        if (parentMeshFilter != null && parentCollider == null)
+        {
+            parentCollider = geometry.AddComponent<MeshCollider>();
+            Mesh parentMesh = parentMeshFilter.sharedMesh;
+            parentCollider.sharedMesh = parentMesh;
+        }
+        else if (parentMeshFilter != null && parentCollider != null)
+        {
+            Mesh parentMesh = parentMeshFilter.sharedMesh;
+            parentCollider.sharedMesh = parentMesh;
+        }
+
+
+        // Children
+        int nChildren = geometry.transform.childCount;
+
+        if (nChildren > 0)
+        {
+            foreach (Transform childObject in geometry.transform)
+            {
+                MeshFilter childMeshFilter = childObject.GetComponent<MeshFilter>();
+                MeshCollider childMeshCollider = childObject.GetComponent<MeshCollider>();
+
+                if (childMeshFilter != null && childMeshCollider == null)
+                {
+                    childMeshCollider = childObject.gameObject.AddComponent<MeshCollider>();
+                    Mesh mesh = childMeshFilter.sharedMesh;
+                    childMeshCollider.sharedMesh = mesh;
+                }
+                else if (childMeshFilter != null && childMeshCollider != null)
+                {
+                    Mesh mesh = childMeshFilter.sharedMesh;
+                    childMeshCollider.sharedMesh = mesh;
+                }
+            }
+        }
+    }
+
+
+    // GeometrySize: Returns the (largest) size of a Game Object using Collider Bounds
+    public Bounds GeometrySize(GameObject geometry)
+    {
+        int nChildren = geometry.transform.childCount;
+
+        if (nChildren == 0)
+        {
+            MeshCollider collider = geometry.GetComponent<MeshCollider>();
+            return collider.bounds;
+        }
+        else
+        {
+            List<Bounds> Sizes = new List<Bounds>();
+
+            // Parent  (Parent geometry of Game Objects isn't always the main geometry)
+            MeshCollider parentcollider = geometry.GetComponent<MeshCollider>(); 
+            if (parentcollider != null)
+                Sizes.Add(parentcollider.bounds);
+            
+
+            // Children
+            foreach (Transform childObject in geometry.transform)
+            {
+                MeshCollider childcollider = geometry.GetComponent<MeshCollider>();
+                if (childcollider != null) 
+                    Sizes.Add(childcollider.bounds);
+            }
+            
+            return Sizes.OrderByDescending(s => s.size.magnitude).ElementAt(0);
+        }
+    }
+
+
+    // InsideCollider: Checks if a given point is inside a collider
+    bool InsideCollider(Vector3 point, Vector3 direction)
+    {
+        Physics.queriesHitBackfaces = true;
 
         int count = 0;
         RaycastHit hit;
+        Vector3 hitPoint = point;
 
-        Vector3 rayEnd = rayPosition;
-        Vector3 direction = rayEnd - point;
-        Vector3 hitPoint = point;//hitPoint = rayStart;
-
-        //while (Physics.Raycast(hitPoint, direction, out hit, direction.magnitude) && count < 100)
-        //{
-        //    hitPoint = hit.point + (direction.normalized / 10.0f);
-        //    count++;
-        //}
-
-        //hitPoint = point;
-
-        while (Physics.Raycast(hitPoint, direction, out hit, direction.magnitude) && count < 100)
+        while (Physics.Raycast(hitPoint, direction, out hit, float.PositiveInfinity))   //RayCastAll has a bug and does not detect all colliders
         {
-            hitPoint = hit.point + (direction.normalized / 1000.0f);
+            hitPoint = hit.point + (direction.normalized / 100.0f);
             count++;
         }
 
@@ -80,58 +192,7 @@ public class CommonMethods
 
 
 
-
-
-
-
-
     ////////////////////////   VECTORS  ////////////////////////
-
-    // AbsVector: Returns a vector whose elements are the absolute values of each of the specified vector's elements.
-    public Vector3 AbsVector(Vector3 vector)
-    {
-        vector.x = Abs(vector.x);
-        vector.y = Abs(vector.y);
-        vector.z = Abs(vector.z);
-        return vector;
-    }
-
-
-    // PerpendicularVector: Returns a vector perpendicular to the given vector.
-    public Vector3 PerpendicularVector(Vector3 vector, float direction)     // direction: either 1 or -1.
-    {
-        float coordX = vector.z * (- direction);
-        float coordZ = vector.x * direction;
-        return new Vector3(coordX, 0, coordZ);
-    }
-
-
-    // ConstrainedRandomVector: Random Vector constrained to a given amplitude (-amplitude -> +amplitude)
-    public Vector3 ConstrainedRandomVector(Vector3 steeringDirection, float velocity, float amplitude)
-    {
-        float angle = Atan2(steeringDirection.z, steeringDirection.x);
-        float range = Random.Range(angle - amplitude, angle + amplitude);
-        Vector3 vector = new Vector3(Cos(range), 0, Sin(range));
-
-        return vector.normalized * velocity;
-    }
-
-
-    // PerlinVector: Random Vector using Perlin Noise
-    public Vector3 PerlinVector(Vector3 steeringDirection, Vector3 position, float velocity)
-    {
-        float noise = PerlinNoise(position.x, position.z);
-        float angle = Atan2(steeringDirection.z, steeringDirection.x);
-
-        float range;
-        if (noise < 0.5)
-            range = angle - noise;
-        else
-            range = angle + noise * 0.5f;
-
-        Vector3 vector = new Vector3(Cos(range), 0, Sin(range));
-        return vector.normalized * velocity;
-    }
 
 
     // RandomVector: Random Direction Vector in Polar coordinates: infinite possible directions (0º -> 360º float)

@@ -2,9 +2,6 @@
 using UnityEngine;
 
 
-
-
-
 public class Cell
 {
     CellGrid _grid;
@@ -66,6 +63,38 @@ public class Cell
                 for (int k = z - 1; k <= z + 1; k++)
                 {
                     if (k == -1 || k == size) continue;
+
+                    if (!(i == x && j == y && k == z))
+                        listNeighbours.Add(_grid.Cells[i, j, k]);
+                }
+            }
+        }
+        return listNeighbours;
+    }
+
+
+    // GetAllNeighboursExtended: Gets all neighbours of a cubic cell for a specified reach (Extended Moore Neighbourhood)
+    public List<Cell> GetAllNeighboursExtended(int reach)
+    {
+        List<Cell> listNeighbours = new List<Cell>();
+
+        int x = Location.x;
+        int y = Location.y;
+        int z = Location.z;
+
+        int size = _grid.AreaSize;
+
+        for (int i = x - reach; i <= x + reach; i++)
+        {
+            if (i < 0 || i > size - 1) continue;
+
+            for (int j = y - 1; j <= y + 1; j++)
+            {
+                if (j < 0 || j > size - 1) continue;
+
+                for (int k = z - 1; k <= z + 1; k++)
+                {
+                    if (k < 0 || k > size - 1) continue;
 
                     if (!(i == x && j == y && k == z))
                         listNeighbours.Add(_grid.Cells[i, j, k]);
@@ -139,6 +168,7 @@ public class Cell
     }
 
 
+    // OppositeNeighbours: Checks if two cells are opposite neighbours of a given cell
     public bool OppositeNeighbours(Cell otherNeighbour) 
     {
         int x = Location.x;

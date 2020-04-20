@@ -18,20 +18,13 @@ public class MainCamera : MonoBehaviour
 
     void Start()
     {
-        XZplane = new Plane(Vector3.up, Vector3.zero);
-        rotateTarget = Vector3.zero;                     // FIX(?): rotateTarget in center of the structure?  
-    }
-
-
-
-
-    // CAMERA START POSITION
-    public void SetCameraPosition(int AreaMin, int AreaMax)
-    {
+        // CAMERA START POSITION
+        int AreaMax = _3DSelfAssembly.AreaMax;
+        int AreaMin = _3DSelfAssembly.AreaMin;
         int AreaWidth = Mathf.Abs(AreaMax - AreaMin);
         float AreaMiddle = AreaMin + AreaWidth * 0.5f;
 
-        if (GUI.Reset != true)
+        if (GUI.Reset == false && GUI.SuggestedShapeSelected == false)
         {
             CameraPosition = new Vector3(AreaMiddle, AreaMax, AreaMiddle);
             transform.position = CameraPosition;
@@ -41,10 +34,12 @@ public class MainCamera : MonoBehaviour
             transform.position = CameraPosition;
             transform.rotation = CameraRotation;
         }
+
+
+
+        XZplane = new Plane(Vector3.up, Vector3.zero);
+        rotateTarget = Vector3.zero;                     // FIX: rotateTarget in center of the self-assembling structure  
     }
-
-
-
 
 
     void Update()

@@ -32,7 +32,5 @@ public class UIElements : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDr
     {
         isBeingDragged = false;
     }
-
-    
 }
 

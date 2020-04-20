@@ -1,6 +1,4 @@
 ﻿using UnityEngine;
-using System.Linq;
-
 
 
 
@@ -22,8 +20,9 @@ public class Agent
     public Cell Location;
     public AgentState State;
 
-    public int ScentValue;    // Change Scent from int to Vector3Int for direction and proximity? (e.g., Seed at (10,10,10))
+    public int ScentValue;    // Change Scent from int to Vector3Int for direction and proximity? (e.g., Seed at (70,70,70))
     public int ScentMax;
+    public int StepCount;
 
 
 
@@ -35,9 +34,8 @@ public class Agent
         State = AgentState.Inactive;
 
         ScentValue = 0;
-        ScentMax = 50;
+        ScentMax = 70;
+        StepCount = 0;
     }
-
-
 
 }
