@@ -8,22 +8,24 @@ public class Agents
     CellGrid _grid;
 
 
-    GameObject agent;
-    Material material;
-    int NumberOfAgents;
+    private GameObject agent;
+    private Material material;
+    private PhysicMaterial physicsMaterial;
+    private int NumberOfAgents;
 
-    public Agent[] listAgents;
+    private Agent[] listAgents;
 
 
 
 
 
     // Constructor
-    public Agents(CellGrid grid, GameObject prefab, Material _material, int _NumberOfAgents)
+    public Agents(CellGrid grid, GameObject prefab, Material _material, PhysicMaterial _physicsMaterial, int _NumberOfAgents)
     {
         _grid = grid;
         agent = prefab;
         material = _material;
+        physicsMaterial = _physicsMaterial;
         NumberOfAgents = _NumberOfAgents;
         listAgents = new Agent[NumberOfAgents];
     }
@@ -49,9 +51,9 @@ public class Agents
                     Cell currentCell = _grid.Cells[x, y, z];
                     currentCell.Alive = true;
                     
-                    Agent newAgent = new Agent(agent, material, currentCell.Center);
+                    Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center);
                     currentCell.agent = newAgent;
-                    newAgent.Location = currentCell;
+                    newAgent.Cell = currentCell;
 
                     newAgent.Obj.transform.localScale *= currentCell.CellSize;
 
@@ -81,9 +83,9 @@ public class Agents
                     Cell cell = _grid.Cells[i + placement.x, placement.y, j + placement.z]; 
                     cell.Alive = true;
 
-                    Agent newAgent = new Agent(agent, material, cell.Center);
+                    Agent newAgent = new Agent(agent, material, physicsMaterial, cell.Center);
                     cell.agent = newAgent;
-                    newAgent.Location = cell;
+                    newAgent.Cell = cell;
 
                     newAgent.Obj.transform.localScale *= cell.CellSize;
 
@@ -116,9 +118,9 @@ public class Agents
                         Cell cell = _grid.Cells[j + placement.x, i + placement.y, k + placement.z];
                         cell.Alive = true;
 
-                        Agent newAgent = new Agent(agent, material, cell.Center);
+                        Agent newAgent = new Agent(agent, material, physicsMaterial, cell.Center);
                         cell.agent = newAgent;
-                        newAgent.Location = cell;
+                        newAgent.Cell = cell;
 
                         newAgent.Obj.transform.localScale *= cell.CellSize;
 
@@ -135,16 +137,16 @@ public class Agents
     // PlaceAgentsInGivenGeometry: Places the agents in a given list of points that forms a 3D shape (only for points inside the lattice)
     public Agent[] PlaceAgentsInGivenGeometry(IEnumerable<Vector3> listPositions)
     {
-        for (int i = 0; i < listPositions.Count(); i++)    // CHECK EXCEPTION: NumAgents != listPositions.Count()
+        for (int i = 0; i < NumberOfAgents; i++)    // CHECK EXCEPTION: NumAgents != listPositions.Count()
         {
             Vector3Int cellLocation = _grid.GetCellLocation(listPositions.ElementAt(i));
 
             Cell currentCell = _grid.GetCell(cellLocation);
             currentCell.Alive = true;
 
-            Agent newAgent = new Agent(agent, material, currentCell.Center);
+            Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center);
             currentCell.agent = newAgent;
-            newAgent.Location = currentCell;
+            newAgent.Cell = currentCell;
 
             newAgent.Obj.transform.localScale *= currentCell.CellSize;
 
@@ -169,9 +171,9 @@ public class Agents
             {
                 currentCell.Alive = true;
 
-                Agent newAgent = new Agent(agent, material, currentCell.Center);
+                Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center);
                 currentCell.agent = newAgent;
-                newAgent.Location = currentCell;
+                newAgent.Cell = currentCell;
 
                 newAgent.Obj.transform.localScale *= currentCell.CellSize;
 
@@ -194,9 +196,9 @@ public class Agents
         Cell firstCell = _grid.GetCell(placement);
         firstCell.Alive = true;
 
-        Agent firstAgent = new Agent(agent, material, firstCell.Center);
+        Agent firstAgent = new Agent(agent, material, physicsMaterial, firstCell.Center);
         firstCell.agent = firstAgent;
-        firstAgent.Location = firstCell;
+        firstAgent.Cell = firstCell;
 
         firstAgent.Obj.transform.localScale *= firstCell.CellSize;
 
@@ -207,7 +209,7 @@ public class Agents
         while (count < NumberOfAgents && tries-- > 0)
         {
             Agent randomAgent = listAgents[Random.Range(0, count)];
-            Cell agentCell = randomAgent.Location;
+            Cell agentCell = randomAgent.Cell;
 
             var faceNeighbours = agentCell.GetFaceNeighbours().Where(cell => cell.Alive == false).ToList();
 
@@ -216,9 +218,9 @@ public class Agents
                 Cell randomNeighbour = faceNeighbours[Random.Range(0, faceNeighbours.Count)];
                 randomNeighbour.Alive = true;
                 
-                Agent newAgent = new Agent(agent, material, randomNeighbour.Center);
+                Agent newAgent = new Agent(agent, material, physicsMaterial, randomNeighbour.Center);
                 randomNeighbour.agent = newAgent;
-                newAgent.Location = randomNeighbour;
+                newAgent.Cell = randomNeighbour;
 
                 newAgent.Obj.transform.localScale *= randomNeighbour.CellSize;
 

@@ -137,7 +137,7 @@ public class ReconfigurationRules
 
         foreach (var rule in ruleList)  
         {
-            Cell currentCell = agent.Location;
+            Cell currentCell = agent.Cell;
             rule.SetTargetCell(currentCell);
             Action currentAction = rule.CheckAction(currentCell);
 
@@ -160,7 +160,7 @@ public class ReconfigurationRules
     // ExecuteAction: Executes a given Action
     public void ExecuteAction(MonoBehaviour mono, Action action, Agent agent)
     {
-        Cell currentCell = agent.Location;
+        Cell currentCell = agent.Cell;
         int cellSize = currentCell.CellSize;
 
         switch (action)
@@ -1399,10 +1399,10 @@ public class ReconfigurationRules
 
     // LINEAR MOVEMENT
     // LinearMovement: Executes a Linear Mouvement and updates the Cell grid
-    public IEnumerator LinearMove(Cell currentCell, Cell targetCell, Vector3 direction, Agent agent, int CellSize)
+    public IEnumerator LinearMove(Cell currentCell, Cell targetCell, Vector3 direction, Agent agent, int CellSize) //Vector3 centerRotation, Vector3 axisRotation
     {
-        agent.Obj.transform.Translate(direction * CellSize);
-        agent.Location = targetCell;
+        agent.Obj.transform.Translate(direction * CellSize); //RotateAround(centerRotation, axisRotation, 90); 
+        agent.Cell = targetCell;
 
         currentCell.Alive = false;
         currentCell.agent = null;
@@ -1418,7 +1418,7 @@ public class ReconfigurationRules
                                              Vector3 direction1, Vector3 direction2, Agent agent, int CellSize)
     {
         agent.Obj.transform.Translate(direction1 * CellSize);
-        agent.Location = transitionCell;
+        agent.Cell = transitionCell;
 
         currentCell.Alive = false;
         currentCell.agent = null;
@@ -1429,7 +1429,7 @@ public class ReconfigurationRules
 
 
         agent.Obj.transform.Translate(direction2 * CellSize);
-        agent.Location = targetCell;
+        agent.Cell = targetCell;
 
         transitionCell.Alive = false;
         transitionCell.agent = null;

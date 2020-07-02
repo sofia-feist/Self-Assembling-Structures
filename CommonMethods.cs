@@ -71,6 +71,8 @@ public class CommonMethods
         Vector3 min = size.min;
         Vector3 max = size.max;
 
+        Physics.queriesHitBackfaces = true;
+
         for (float y = min.y + 0.5f; y < max.y; y++)
         {
             for (float z = min.z + 0.5f; z < max.z; z++)
@@ -79,11 +81,13 @@ public class CommonMethods
                 {
                     Vector3 point = new Vector3(x, y, z);
 
-                    if (InsideCollider(point, Vector3.down))                  // CONTROL Nº OF POINTS (aka GOAL CELLS) ACC TO Nº of AGENTS?  -  MORE AGENTS -> MORE RESOLUTION
+                    if (InsideCollider(point, Vector3.up))                  // CONTROL Nº OF POINTS (aka GOAL CELLS) ACC TO Nº of AGENTS?  -  MORE AGENTS -> MORE RESOLUTION
                         yield return point;
                 }
             }
         }
+
+        Physics.queriesHitBackfaces = false;
     }
 
 
@@ -169,12 +173,11 @@ public class CommonMethods
     // InsideCollider: Checks if a given point is inside a collider
     bool InsideCollider(Vector3 point, Vector3 direction)
     {
-        Physics.queriesHitBackfaces = true;
-
         int count = 0;
         RaycastHit hit;
         Vector3 hitPoint = point;
 
+        //Debug.DrawRay(hitPoint, direction);
         while (Physics.Raycast(hitPoint, direction, out hit, float.PositiveInfinity))   //RayCastAll has a bug and does not detect all colliders
         {
             hitPoint = hit.point + (direction.normalized / 100.0f);
