@@ -27,12 +27,12 @@ public class UDPReceive : MonoBehaviour
 
     // Received Message
     private static string receivedData = "";
-    private event EventHandler _MessageReceived;
+    internal static bool MessageReceived = false;
 
     internal static float maxDisplacement;
     internal static List<Vector3> displacements = new List<Vector3>();
 
-    internal static bool MessageReceivedBool = false;
+    
 
 
     // Starts receiving thread when Unity starts
@@ -46,9 +46,6 @@ public class UDPReceive : MonoBehaviour
             receiveThread.Start();
             isRunning = true;
         }
-
-        // Decodes the message when Message Received event is triggered
-        _MessageReceived += MessageReceived;
     }
 
 
@@ -75,8 +72,7 @@ public class UDPReceive : MonoBehaviour
                 DecodeMessage(receivedData);
 
                 // Triggers the MessageReceived event to
-                MessageReceivedBool = true;
-                //OnMessageReceived();
+                MessageReceived = true;
             }
             catch (Exception err)
             {
@@ -99,22 +95,6 @@ public class UDPReceive : MonoBehaviour
         //    Vector3 displacement = new Vector3(float.Parse(data[i]), float.Parse(data[i + 1]), float.Parse(data[i + 2]));
         //    displacements.Add(displacement);
         //}
-    }
-
-
-    // Trigger the MessageReceived event, which in turn triggers the DecodeMessage method
-    protected virtual void OnMessageReceived()
-    {
-        _MessageReceived?.Invoke(this, EventArgs.Empty);
-    }
-
-
-    // 
-    private static void MessageReceived(object sender, EventArgs e)
-    {
-        //Debug.Log("Message Received: " + receivedData);
-        //Debug.Log("Message Received: " + maxDisplacement.ToString("F10"));
-        MessageReceivedBool = true;
     }
 
 

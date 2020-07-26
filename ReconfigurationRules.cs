@@ -151,13 +151,34 @@ public class ReconfigurationRules
 
             if (currentAction != Action.NoAction)
             {
+                int tries = 0;
                 var sendList = otherAgents.Union(new Vector3[] { rule.targetCell.Center }).ToArray();
-                UDPSend.SendData(UDPSend.EncodeMessage(sendList));
-                Thread.Sleep(100);
-                //waitHandle.WaitOne();
-                rule.CalculateFitness(agent);
-                rulesThatApply.Add(rule);
-                rulesThatApply = rulesThatApply.OrderByDescending(r => r.fitness).ToList();    // Sort by fitness
+
+                while (tries < 3)
+                {
+                    int count = 0;
+
+                    UDPSend.SendData(UDPSend.EncodeMessage(sendList));
+                    UDPReceive.MessageReceived = false;
+
+                    while (UDPReceive.MessageReceived == false && count < 3)
+                    {
+                        Thread.Sleep(70);
+                        count++;
+                    }
+
+                    if (UDPReceive.MessageReceived == true)
+                    {
+                        rule.CalculateFitness(agent);
+                        rulesThatApply.Add(rule);
+                        rulesThatApply = rulesThatApply.OrderByDescending(r => r.fitness).ToList();    // Sort by fitness
+
+                        break;
+                    }
+
+                    tries++;
+                    if (tries == 3) Debug.Log("Action Lost");
+                }
             }
         }
 

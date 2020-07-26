@@ -133,7 +133,7 @@ public class _3DSelfAssembly : MonoBehaviour
         //listAgents = agents.PlaceConnectedAgentsRandomly(new Vector3Int(1, 0, 1));   //Not in use
 
         //if ((int)Mathf.Ceil(Mathf.Sqrt(NumAgents)) < grid.AreaSize)
-        //listAgents = agents.PlaceAgentsIn2DRows(new Vector3Int(1, 0, 1));
+        listAgents = agents.PlaceAgentsIn2DRows(new Vector3Int(1, 0, 1));
         //else
         //    listAgents = agents.PlaceAgentsIn3DRows(new Vector3Int(1, 0, 1));
 
@@ -146,7 +146,7 @@ public class _3DSelfAssembly : MonoBehaviour
         //{
         //    Instantiate(agentPrefab, item, Quaternion.identity);
         //}
-        ModulesTest();
+        //ModulesTest();
         //AddSupport();
         //AddJoints();
 
@@ -174,7 +174,7 @@ public class _3DSelfAssembly : MonoBehaviour
         //    cell.GoalCell = true;
         //CheckAliveCells();
 
-        foo();
+        //foo();
     }
 
 
@@ -195,32 +195,41 @@ public class _3DSelfAssembly : MonoBehaviour
         Vector3 winnerVector = new Vector3();
         List<float> disps = new List<float>();
 
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 30; i++)
         {
-            int count = 0;
+            int tries = 0;
             
             var randomAgent = listAgents[UnityEngine.Random.Range(0, listAgents.Length - 1)];
             var v = randomAgent.Cell.GetFaceNeighbours().Where(x => x.Alive == false).ToArray()[0].Center;
             Vector3[] N = new Vector3[] { v };
 
-            UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).Union(N).ToArray()));
-            UDPReceive.MessageReceivedBool = false;
-
-            while (UDPReceive.MessageReceivedBool == false && count < 10)
+            while (tries < 3)
             {
-                Thread.Sleep(50);
-                count++;
+                int count = 0;
+
+                UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).Union(N).ToArray()));
+                UDPReceive.MessageReceived = false;
+
+                while (UDPReceive.MessageReceived == false && count < 3)
+                {
+                    Thread.Sleep(40);
+                    count++;
+                }
+
+                if (UDPReceive.MessageReceived == true)
+                {
+                    print("Count: " + count + ", Tries: " + tries);
+                    print("_" + UDPReceive.maxDisplacement.ToString("F10"));
+
+                    disps.Add(UDPReceive.maxDisplacement);
+                    if (disps.Min() >= UDPReceive.maxDisplacement)
+                        winnerVector = v;
+
+                    break;
+                }
+
+                tries++;
             }
-
-            //if (count == 10 && UDPReceive.MessageReceivedBool == false)
-            //    UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).Union(N).ToArray()));
-
-            print("_" + UDPReceive.maxDisplacement.ToString("F10"));
-           
-
-            disps.Add(UDPReceive.maxDisplacement);
-            if (disps.Min() >= UDPReceive.maxDisplacement)
-                winnerVector = v;
         }
 
         print("Winner: " + winnerVector + "," + disps.Min().ToString("F10"));
