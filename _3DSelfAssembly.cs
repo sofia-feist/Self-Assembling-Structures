@@ -16,8 +16,8 @@ public class _3DSelfAssembly : MonoBehaviour
     CellGrid grid;
     ReconfigurationRules reconfiguration;
     CommonMethods CM = new CommonMethods();
+    UDPReceive udpReceive;
 
-    UDPSend udpSend;
 
 
 
@@ -36,10 +36,11 @@ public class _3DSelfAssembly : MonoBehaviour
 
 
     // Environment
-    public static int AreaMin;
-    public static int AreaMax;
+    public static float AreaMin;
+    public static float AreaMax;
+
     public static int NumAgents;
-    public const int defaultNumAgents = 120;
+    public const int defaultNumAgents = 50;
     int maxActiveAgents;
 
 
@@ -62,13 +63,18 @@ public class _3DSelfAssembly : MonoBehaviour
 
 
 
-    // Performance Diagnostic
-    public Stopwatch timer = new Stopwatch();
+    // Diagnostics
+    public static Stopwatch timer = new Stopwatch();
+    List<GameObject> alive = new List<GameObject>();
+    
+
 
 
 
     void Start()
     {
+        //sph = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+
         // INITIALIZE NUMBER OF AGENTS
         if (GUI.Reset == false && GUI.SuggestedShapeSelected == false)
             NumAgents =  defaultNumAgents;   // Set Number of Agents to default Number: 120
@@ -80,14 +86,15 @@ public class _3DSelfAssembly : MonoBehaviour
         if (GUI.GoalShape == null)
             GUI.GoalShape = DefaultShape;
         
-        GameObject GoalShape = Instantiate(GUI.GoalShape, new Vector3Int(5, 0, 5), Quaternion.identity);  //Pivot: bottom left corner
-        shapePoints = CM.PointsFromGeometry(GoalShape).ToList();
+        GameObject GoalShape = Instantiate(GUI.GoalShape, new Vector3(0.25f, 0, 0.25f), Quaternion.identity);  //Pivot: bottom left corner
+        GoalShape.layer = 8;
+        shapePoints = CM.PointsFromGeometry(GoalShape, Cell.CellSize).ToList();
         //if (GUI.SuggestedShapeSelected) 
             NumAgents = shapePoints.Count;
         Destroy(GoalShape);
 
-        
 
+        
 
         // SET MAX ACTIVE AGENTS
         if (NumAgents < 100)
@@ -103,18 +110,16 @@ public class _3DSelfAssembly : MonoBehaviour
         // SET AREA PROPERTIES
         AreaMin = 0;
         if (NumAgents <= 50)
-            AreaMax = 10;
+            AreaMax = 2.5f;
         else if (NumAgents > 750)
-            AreaMax = 150;          // DO NOT EXCEED 500x500! 
+            AreaMax = 7.5f;          // DO NOT EXCEED 500x500! 
         else
-            AreaMax = NumAgents / 5;                                   
+            AreaMax = 5.0f;// NumAgents;
 
 
 
         // INSTANTIATE EMPTY GRID OF CELLS
         grid = new CellGrid(AreaMin, AreaMax);
-
-
 
         // INSTANTIATE AGENTS
         agents = new Agents(grid, agentPrefab, Material, physicsMaterial, NumAgents);
@@ -125,40 +130,128 @@ public class _3DSelfAssembly : MonoBehaviour
         //listAgents = agents.FillCellsWithAgents();  //Not in use
         //listAgents = agents.PlaceAgentsRandomly();  //Not in use
         //listAgents = agents.PlaceAgentsInGivenGeometry(shapePoints);         //Not in use   
-        //listAgents = Agents.PlaceConnectedAgentsRandomly(new Vector3Int(1, 0, 1));   //Not in use
+        //listAgents = agents.PlaceConnectedAgentsRandomly(new Vector3Int(1, 0, 1));   //Not in use
 
         //if ((int)Mathf.Ceil(Mathf.Sqrt(NumAgents)) < grid.AreaSize)
-        listAgents = agents.PlaceAgentsIn2DRows(new Vector3Int(1, 0, 1));
+        //listAgents = agents.PlaceAgentsIn2DRows(new Vector3Int(1, 0, 1));
         //else
         //    listAgents = agents.PlaceAgentsIn3DRows(new Vector3Int(1, 0, 1));
 
 
 
         // INSTANTIATE RECONFIGURATION RULES
-        reconfiguration = new ReconfigurationRules(currentSpeed);
+        reconfiguration = new ReconfigurationRules(currentSpeed, grid);
 
         //foreach (var item in shapePoints)
         //{
         //    Instantiate(agentPrefab, item, Quaternion.identity);
         //}
-        //ModulesTest();
+        ModulesTest();
         //AddSupport();
         //AddJoints();
 
 
-
         // Send data to GH
         // Implement Events to send message (each time an agent moves)
-        udpSend = FindObjectOfType(typeof(UDPSend)) as UDPSend;
-        udpSend.SendData(udpSend.EncodeMessage(listAgents));
+        //UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).ToArray()));
+        //waitHandle.WaitOne();
+        //print("_" + UDPReceive.maxDisplacement.ToString("F10"));
+
+        //foo();
+
+        //SetGoalShapeFromSeed(new Vector3Int(1, 0, 1));
+        //SetGoalShape(shapePoints);
+        //CheckAliveCells();
+
+        //GenerateGoalShape(new List<Vector3Int>() { new Vector3Int(5, 0, 5), new Vector3Int(10, 0, 5), new Vector3Int(5, 0, 10), new Vector3Int(10, 0, 10) }, 90);
+        //CheckAliveCells();
+        //print(evaluateGoalShapeSimilarity());
+
+        //OptimizationAlgorithms Optimize = new OptimizationAlgorithms(grid, 30, 500);
+        ////var l = Optimize.GenerateGoalShape(new List<Vector3Int>() { new Vector3Int(5, 0, 5), new Vector3Int(10, 0, 5), new Vector3Int(5, 0, 10), new Vector3Int(10, 0, 10) }, 90);
+        //Optimize.SimulatedAnnealing(new List<Vector3Int>() { new Vector3Int(5, 0, 5), new Vector3Int(10, 0, 5), new Vector3Int(5, 0, 10), new Vector3Int(10, 0, 10) }, 90);
+        //foreach (var cell in Optimize.bestCandidate)
+        //    cell.GoalCell = true;
+        //CheckAliveCells();
+
+        foo();
     }
+
+
+
+
 
     // Update is called once per frame
     void Update()
     {
-
+        //CheckAliveCells();
+        //sph.transform.localScale = new Vector3(radius, radius, radius);
+ 
     }
 
+
+    void foo()
+    {
+        Vector3 winnerVector = new Vector3();
+        List<float> disps = new List<float>();
+
+        for (int i = 0; i < 100; i++)
+        {
+            int count = 0;
+            
+            var randomAgent = listAgents[UnityEngine.Random.Range(0, listAgents.Length - 1)];
+            var v = randomAgent.Cell.GetFaceNeighbours().Where(x => x.Alive == false).ToArray()[0].Center;
+            Vector3[] N = new Vector3[] { v };
+
+            UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).Union(N).ToArray()));
+            UDPReceive.MessageReceivedBool = false;
+
+            while (UDPReceive.MessageReceivedBool == false && count < 10)
+            {
+                Thread.Sleep(50);
+                count++;
+            }
+
+            //if (count == 10 && UDPReceive.MessageReceivedBool == false)
+            //    UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).Union(N).ToArray()));
+
+            print("_" + UDPReceive.maxDisplacement.ToString("F10"));
+           
+
+            disps.Add(UDPReceive.maxDisplacement);
+            if (disps.Min() >= UDPReceive.maxDisplacement)
+                winnerVector = v;
+        }
+
+        print("Winner: " + winnerVector + "," + disps.Min().ToString("F10"));
+        Instantiate(agentPrefab, winnerVector, Quaternion.identity);
+    }
+
+
+
+    void CheckAliveCells()
+    {
+        foreach (var ob in alive)
+            Destroy(ob);
+
+        alive.Clear();
+
+        GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        obj.transform.localScale = new Vector3(0.048f, 0.048f, 0.048f);
+        obj.GetComponent<BoxCollider>().enabled = false;
+        obj.GetComponent<Renderer>().material.color = finalState;
+
+        foreach (var cell in grid.Cells)
+        {
+            if (cell.GoalCell == true)
+            {
+                var clone = Instantiate(obj, cell.Center, Quaternion.identity);
+                alive.Add(clone);
+            }
+        }
+
+        Destroy(obj);
+    }
 
     void ModulesTest()
     {
@@ -171,7 +264,7 @@ public class _3DSelfAssembly : MonoBehaviour
             Cell cell = grid.GetCell(new Vector3Int(0,i,0));
             cell.Alive = true;
 
-            Agent agent = new Agent(agentPrefab, Material, physicsMaterial, cell.Center);
+            Agent agent = new Agent(agentPrefab, Material, physicsMaterial, cell.Center, i);
             cell.agent = agent;
 
             listAgents[i] = agent;
@@ -183,7 +276,7 @@ public class _3DSelfAssembly : MonoBehaviour
             Cell cell = grid.GetCell(new Vector3Int(i+1, v-1, 0));
             cell.Alive = true;
 
-            Agent agent = new Agent(agentPrefab, Material, physicsMaterial, cell.Center);
+            Agent agent = new Agent(agentPrefab, Material, physicsMaterial, cell.Center, v + i);
             cell.agent = agent;
 
             listAgents[v+i] = agent;
@@ -259,28 +352,22 @@ public class _3DSelfAssembly : MonoBehaviour
     //AgentSelectionByNeighbours: The bigger the number of neighbours, the less probability the agent has to be chosen
     public Agent AgentSelectionByNeighbours(Agent[] agents)
     {
-            while (true)
-            {
-                Agent agent = agents[UnityEngine.Random.Range(0, agents.Length)];
-                var neighbours = agent.Cell.GetFaceNeighbours().Where(n => n.Alive);
-                int nNeighbours = neighbours.Count();
+        while (true)
+        {
+            Agent agent = agents[UnityEngine.Random.Range(0, agents.Length)];
+            var neighbours = agent.Cell.GetFaceNeighbours().Where(n => n.Alive);
+            int nNeighbours = neighbours.Count();
 
-                float probabilityOfChoice = 1.0f - nNeighbours / 6.0f + (float)1e-3;
-                float thresholdOfAcceptance = 1.0f - Mathf.Pow(UnityEngine.Random.Range(0.0f, 1.0f), nNeighbours);
+            float probabilityOfChoice = 1.0f - nNeighbours / 6.0f + (float)1e-3;
+            float thresholdOfAcceptance = 1.0f - Mathf.Pow(UnityEngine.Random.Range(0.0f, 1.0f), nNeighbours);
 
-                if (agent.State == AgentState.Inactive &&                           // Leave inactive agents next to goal structure with a lower probability of being chosen to avoid disconnections 
-                    neighbours.Any(n => n.agent.State == AgentState.Final) &&
-                    listAgents.Any(a => a.State == AgentState.Inactive && a.Cell.GetFaceNeighbours().Count(n => n.Alive && n.agent.State == AgentState.Final) == 0))
-                    continue;
+            if (neighbours.Any(n => n.agent.State == AgentState.Final) &&    // Leave inactive agents next to goal structure with a lower probability of being chosen to avoid disconnections
+                agents.Any(a => a.Cell.GetFaceNeighbours().Count(n => n.Alive && n.agent.State == AgentState.Final) == 0))
+                continue;
 
-                if (neighbours.Any(n => n.agent.State == AgentState.Seed))
-                    probabilityOfChoice = 1;
-
-                if (thresholdOfAcceptance < probabilityOfChoice)
-                    return agent;
-            }
-
-        
+            if (thresholdOfAcceptance < probabilityOfChoice)
+                return agent;
+        }
     }
 
 
@@ -322,7 +409,7 @@ public class _3DSelfAssembly : MonoBehaviour
             {
                 Agent agent = AgentSelectionByNeighbours(listAgents);
 
-                Action nextAction = reconfiguration.ChoseAction(agent);
+                Action nextAction = reconfiguration.ChoseAction(listAgents, agent);
 
                 if (nextAction != Action.NoAction)
                     reconfiguration.ExecuteAction(this, nextAction, agent);
@@ -364,7 +451,7 @@ public class _3DSelfAssembly : MonoBehaviour
                 if (listAgents.Count(a => a.State == AgentState.Inactive) > 0 && listAgents.Count(a => a.State == AgentState.Active) < maxActiveAgents)
                     agent = AgentSelectionByNeighbours(listAgents.Where(a => a.State == AgentState.Inactive).ToArray());
                 else
-                    agent = AgentSelectionByNeighbours(listAgents.Where(a => a.State == AgentState.Active).ToArray());
+                    agent = AgentSelectionByScent(listAgents.Where(a => a.State == AgentState.Active).ToArray());
 
                 AgentState state = agent.State;
 
@@ -373,15 +460,15 @@ public class _3DSelfAssembly : MonoBehaviour
                     agent.State = AgentState.Final;
                     agent.Obj.GetComponent<Renderer>().material.color = finalState;
 
-                    IsSupport(agent);
-                    UpdateJoints(agent);
+                    //IsSupport(agent);
+                    //UpdateJoints(agent);
                     UpdateSeed(ref Seed);
                     continue;
                 }
 
                 if (state == AgentState.Active)
                 {
-                    Action nextAction = reconfiguration.ChoseAction(agent);
+                    Action nextAction = reconfiguration.ChoseAction(listAgents, agent);
 
                     if (nextAction != Action.NoAction)
                     {
@@ -403,8 +490,8 @@ public class _3DSelfAssembly : MonoBehaviour
                             agent.State = AgentState.Final;
                             agent.Obj.GetComponent<Renderer>().material.color = finalState;
 
-                            IsSupport(agent);
-                            UpdateJoints(agent);
+                            //IsSupport(agent);
+                            //UpdateJoints(agent);
                             UpdateSeed(ref Seed);
                         }
                         yield return null; //new WaitForSeconds(currentSpeed);    <-  Probably not needed?  
@@ -462,9 +549,6 @@ public class _3DSelfAssembly : MonoBehaviour
 
         foreach (var agent in agents)
         {
-            agent.BoxColl.enabled = true;
-            agent.Rb.useGravity = true;
-
             Cell currentCell = agent.Cell;
             int nNeighbours = currentCell.GetFaceNeighbours().Count(n => n.Alive);
 
@@ -627,6 +711,10 @@ public class _3DSelfAssembly : MonoBehaviour
             }
         }
     }
+
+    
+
+    
 
 
     // ClearGoalCells: Sets all goal cells back to false

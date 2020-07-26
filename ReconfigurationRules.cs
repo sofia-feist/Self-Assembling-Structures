@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UnityEngine;
 
 
@@ -56,18 +57,24 @@ public enum Action
 public class ReconfigurationRules
 {
     CommonMethods CM = new CommonMethods();
+    CellGrid grid;
 
+    private float speed;
+    private float ImpulseForce;
+    private static List<Rule> ruleList;
 
-    float speed;
-    static List<Rule> ruleList;
+    internal static AutoResetEvent waitHandle = new AutoResetEvent(false);
 
 
 
 
     // Constructor
-    public ReconfigurationRules(float _speed)
+    public ReconfigurationRules(float _speed, CellGrid _grid)
     {
         speed = _speed;
+        grid = _grid;
+
+        ImpulseForce = 2000f;
         ruleList = RuleList();
     }
 
@@ -128,8 +135,9 @@ public class ReconfigurationRules
 
 
     // ChoseAction: Choose an action to take according rule fitness
-    public Action ChoseAction(Agent agent)
+    public Action ChoseAction(Agent[] listAgents, Agent agent)
     {
+        var otherAgents = listAgents.Where(a => a.Id != agent.Id).Select(a => a.Cell.Center).ToArray();
         Action nextAction = Action.NoAction;
         CM.RandomShuffle(ruleList);
 
@@ -143,7 +151,11 @@ public class ReconfigurationRules
 
             if (currentAction != Action.NoAction)
             {
-                rule.CalculateFitness(currentCell);
+                var sendList = otherAgents.Union(new Vector3[] { rule.targetCell.Center }).ToArray();
+                UDPSend.SendData(UDPSend.EncodeMessage(sendList));
+                Thread.Sleep(100);
+                //waitHandle.WaitOne();
+                rule.CalculateFitness(agent);
                 rulesThatApply.Add(rule);
                 rulesThatApply = rulesThatApply.OrderByDescending(r => r.fitness).ToList();    // Sort by fitness
             }
@@ -161,143 +173,142 @@ public class ReconfigurationRules
     public void ExecuteAction(MonoBehaviour mono, Action action, Agent agent)
     {
         Cell currentCell = agent.Cell;
-        int cellSize = currentCell.CellSize;
 
         switch (action)
         {
             // Linear Mouvements
             case Action.North:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, currentCell.MiddleNorth(), Vector3.forward, agent, cellSize));
+                    LinearMove(currentCell, currentCell.MiddleNorth(), Vector3.forward, agent)); //Vector3.right, agent));
                 break;
             case Action.South:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, currentCell.MiddleSouth(), Vector3.back, agent, cellSize));
+                    LinearMove(currentCell, currentCell.MiddleSouth(), Vector3.back, agent)); //Vector3.left, agent));
                 break;
             case Action.East:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, currentCell.MiddleEast(), Vector3.right, agent, cellSize));
+                    LinearMove(currentCell, currentCell.MiddleEast(), Vector3.right, agent)); //Vector3.back, agent));
                 break;
             case Action.West:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, currentCell.MiddleWest(), Vector3.left, agent, cellSize));
+                    LinearMove(currentCell, currentCell.MiddleWest(), Vector3.left, agent)); //Vector3.forward, agent));
                 break;
             case Action.Up:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, currentCell.Up(), Vector3.up, agent, cellSize));
+                    LinearMove(currentCell, currentCell.Up(), Vector3.up, agent)); //Vector3.right, agent));
                 break;
             case Action.Down:
                 mono.StartCoroutine(
-                    LinearMove(currentCell, currentCell.Bottom(), Vector3.down, agent, cellSize));
+                    LinearMove(currentCell, currentCell.Bottom(), Vector3.down, agent)); //Vector3.left, agent));
                 break;
 
 
             // Convex/Concave Mouvements
             case Action.UpNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperNorth(), Vector3.up, Vector3.forward, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperNorth(), Vector3.up, Vector3.forward, agent));
                 break;
             case Action.DownNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomNorth(), Vector3.down, Vector3.forward, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomNorth(), Vector3.down, Vector3.forward, agent));
                 break;
             case Action.NorthUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.UpperNorth(), Vector3.forward, Vector3.up, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.UpperNorth(), Vector3.forward, Vector3.up, agent));
                 break;
             case Action.NorthDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.BottomNorth(), Vector3.forward, Vector3.down, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.BottomNorth(), Vector3.forward, Vector3.down, agent));
                 break;
 
 
             case Action.UpSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperSouth(), Vector3.up, Vector3.back, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperSouth(), Vector3.up, Vector3.back, agent));
                 break;
             case Action.DownSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomSouth(), Vector3.down, Vector3.back, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomSouth(), Vector3.down, Vector3.back, agent));
                 break;
             case Action.SouthUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.UpperSouth(), Vector3.back, Vector3.up, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.UpperSouth(), Vector3.back, Vector3.up, agent));
                 break;
             case Action.SouthDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.BottomSouth(), Vector3.back, Vector3.down, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.BottomSouth(), Vector3.back, Vector3.down, agent));
                 break;
 
 
             case Action.UpEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperEast(), Vector3.up, Vector3.right, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperEast(), Vector3.up, Vector3.right, agent));
                 break;
             case Action.DownEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomEast(), Vector3.down, Vector3.right, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomEast(), Vector3.down, Vector3.right, agent));
                 break;
             case Action.EastUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.UpperEast(), Vector3.right, Vector3.up, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.UpperEast(), Vector3.right, Vector3.up, agent));
                 break;
             case Action.EastDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.BottomEast(), Vector3.right, Vector3.down, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.BottomEast(), Vector3.right, Vector3.down, agent));
                 break;
 
 
             case Action.UpWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperWest(), Vector3.up, Vector3.left, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Up(), currentCell.UpperWest(), Vector3.up, Vector3.left, agent));
                 break;
             case Action.DownWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomWest(), Vector3.down, Vector3.left, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.Bottom(), currentCell.BottomWest(), Vector3.down, Vector3.left, agent));
                 break;
             case Action.WestUp:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.UpperWest(), Vector3.left, Vector3.up, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.UpperWest(), Vector3.left, Vector3.up, agent));
                 break;
             case Action.WestDown:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.BottomWest(), Vector3.left, Vector3.down, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.BottomWest(), Vector3.left, Vector3.down, agent));
                 break;
 
 
             case Action.NorthEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.MiddleNorthEast(), Vector3.forward, Vector3.right, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.MiddleNorthEast(), Vector3.forward, Vector3.right, agent));
                 break;
             case Action.NorthWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.MiddleNorthWest(), Vector3.forward, Vector3.left, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleNorth(), currentCell.MiddleNorthWest(), Vector3.forward, Vector3.left, agent));
                 break;
             case Action.EastNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.MiddleNorthEast(), Vector3.right, Vector3.forward, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.MiddleNorthEast(), Vector3.right, Vector3.forward, agent));
                 break;
             case Action.WestNorth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.MiddleNorthWest(), Vector3.left, Vector3.forward, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.MiddleNorthWest(), Vector3.left, Vector3.forward, agent));
                 break;
 
 
             case Action.SouthEast:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.MiddleSouthEast(), Vector3.back, Vector3.right, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.MiddleSouthEast(), Vector3.back, Vector3.right, agent));
                 break;
             case Action.SouthWest:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.MiddleSouthWest(), Vector3.back, Vector3.left, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleSouth(), currentCell.MiddleSouthWest(), Vector3.back, Vector3.left, agent));
                 break;
             case Action.EastSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.MiddleSouthEast(), Vector3.right, Vector3.back, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleEast(), currentCell.MiddleSouthEast(), Vector3.right, Vector3.back, agent));
                 break;
             case Action.WestSouth:
                 mono.StartCoroutine(
-                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.MiddleSouthWest(), Vector3.left, Vector3.back, agent, cellSize));
+                    ConvexConcaveMove(currentCell, currentCell.MiddleWest(), currentCell.MiddleSouthWest(), Vector3.left, Vector3.back, agent));
                 break;
         }
     }
@@ -313,7 +324,7 @@ public class ReconfigurationRules
     // ABSTRACT RULE
     public abstract class Rule
     {
-        public int fitness { get; set; }
+        public float fitness { get; set; }
         public Cell targetCell { get; set; }
         public Action action { get; set; }
 
@@ -391,18 +402,18 @@ public class ReconfigurationRules
         }
 
 
-        public void CalculateFitness(Cell currentCell)
+        public void CalculateFitness(Agent agent)
         {
-            int currentScent = currentCell.agent.ScentValue;
+            int currentScent = agent.ScentValue;
             var targetNeighbours = targetCell.GetFaceNeighbours().Where(a => a.Alive == true);
             int newScentValue = (targetNeighbours.Count() != 0) ? targetNeighbours.Select(s => s.agent.ScentValue).Max() - 1 : 0;
 
             if (currentScent == newScentValue)
-                fitness = 0;
+                fitness = 0 - UDPReceive.maxDisplacement;
             else if (newScentValue > currentScent)
-                fitness = 1;
+                fitness = 1 - UDPReceive.maxDisplacement;
             else
-                fitness = -1;
+                fitness = -1 - UDPReceive.maxDisplacement;
         }
     }
 
@@ -1399,15 +1410,32 @@ public class ReconfigurationRules
 
     // LINEAR MOVEMENT
     // LinearMovement: Executes a Linear Mouvement and updates the Cell grid
-    public IEnumerator LinearMove(Cell currentCell, Cell targetCell, Vector3 direction, Agent agent, int CellSize) //Vector3 centerRotation, Vector3 axisRotation
+    public IEnumerator LinearMove(Cell currentCell, Cell targetCell, Vector3 torqueAxis, Agent agent) 
     {
-        agent.Obj.transform.Translate(direction * CellSize); //RotateAround(centerRotation, axisRotation, 90); 
+        targetCell.Occupancy = CellOccupancy.Reserved;
+
+        agent.Obj.transform.Translate(torqueAxis * Cell.CellSize);
+        //agent.Rb.AddTorque(torqueAxis * ImpulseForce, ForceMode.Impulse);
+
+        //while (!agent.Rb.IsSleeping())  { }
+
+        //Cell newCell = grid.GetCell(grid.GetCellLocation(agent.Obj.transform.position));
+
+        //if (newCell != targetCell)
+        //{
+        //    targetCell.Occupancy = CellOccupancy.Empty;
+        //    targetCell = newCell;
+        //}
+
         agent.Cell = targetCell;
 
-        currentCell.Alive = false;
-        currentCell.agent = null;
         targetCell.Alive = true;
+        targetCell.Occupancy = CellOccupancy.Occupied;
         targetCell.agent = agent;
+
+        currentCell.Alive = false;
+        targetCell.Occupancy = CellOccupancy.Empty;
+        currentCell.agent = null;
 
         yield return new WaitForSeconds(speed);
     }
@@ -1415,9 +1443,9 @@ public class ReconfigurationRules
 
     // ConvexConcaveMovement: Executes a Concave OR Convex Movement and updates the Cell grid
     public IEnumerator ConvexConcaveMove(Cell currentCell, Cell transitionCell, Cell targetCell, 
-                                             Vector3 direction1, Vector3 direction2, Agent agent, int CellSize)
+                                             Vector3 direction1, Vector3 direction2, Agent agent)
     {
-        agent.Obj.transform.Translate(direction1 * CellSize);
+        agent.Obj.transform.Translate(direction1 * Cell.CellSize);
         agent.Cell = transitionCell;
 
         currentCell.Alive = false;
@@ -1428,7 +1456,7 @@ public class ReconfigurationRules
         yield return null; //new WaitForSeconds(speed);
 
 
-        agent.Obj.transform.Translate(direction2 * CellSize);
+        agent.Obj.transform.Translate(direction2 * Cell.CellSize);
         agent.Cell = targetCell;
 
         transitionCell.Alive = false;

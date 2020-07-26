@@ -5,9 +5,16 @@ using static UnityEngine.Mathf;
 
 public class CommonMethods 
 {
-    
+
     ////////////////////////   RANDOM SHUFFLE  ////////////////////////
 
+
+    public static void Swap<T>(ref T a, ref T b)
+    {
+        var temp = a;
+        a = b;
+        b = temp;
+    }
 
     // RandomShuffle(list): Fisher-Yates Shuffle algorithm; shuffles a list to randomly organize the its elements
     public void RandomShuffle<T>(List<T> list)
@@ -43,7 +50,7 @@ public class CommonMethods
 
 
     // OutsideBoundaries: Checks if a given vector is located outside of the given boundaries (square)
-    public bool OutsideBoundaries(Vector3 position, int AreaMin, int AreaMax)
+    public bool OutsideBoundaries(Vector3 position, float AreaMin, float AreaMax)
     {
         if (position.x > AreaMax ||
             position.y > AreaMax ||
@@ -63,7 +70,8 @@ public class CommonMethods
 
 
     // PointsFromGeometry: Calculates the target points for the Self-Assembly Algorithm from an 3D geometric input
-    public IEnumerable<Vector3> PointsFromGeometry(GameObject geometry)
+    // GROWTH STRATEGY FOR GOAL SHAPE (FROM INITIAL GOAL POINT(S))
+    public IEnumerable<Vector3> PointsFromGeometry(GameObject geometry, float cellSize)
     {
         SetupColliders(geometry);
 
@@ -73,11 +81,11 @@ public class CommonMethods
 
         Physics.queriesHitBackfaces = true;
 
-        for (float y = min.y + 0.5f; y < max.y; y++)
+        for (float y = min.y + cellSize/2; y < max.y; y += cellSize)
         {
-            for (float z = min.z + 0.5f; z < max.z; z++)
+            for (float z = min.z + cellSize/2; z < max.z; z += cellSize)
             {
-                for (float x = min.x + 0.5f; x < max.x; x++)
+                for (float x = min.x + cellSize/2; x < max.x; x += cellSize)
                 {
                     Vector3 point = new Vector3(x, y, z);
 
@@ -171,14 +179,15 @@ public class CommonMethods
 
 
     // InsideCollider: Checks if a given point is inside a collider
-    bool InsideCollider(Vector3 point, Vector3 direction)
+    internal bool InsideCollider(Vector3 point, Vector3 direction)
     {
         int count = 0;
         RaycastHit hit;
         Vector3 hitPoint = point;
+        int layerMask = 1 << 8;
 
         //Debug.DrawRay(hitPoint, direction);
-        while (Physics.Raycast(hitPoint, direction, out hit, float.PositiveInfinity))   //RayCastAll has a bug and does not detect all colliders
+        while (Physics.Raycast(hitPoint, direction, out hit, float.PositiveInfinity, layerMask))   //RayCastAll has a bug and does not detect all colliders
         {
             hitPoint = hit.point + (direction.normalized / 100.0f);
             count++;

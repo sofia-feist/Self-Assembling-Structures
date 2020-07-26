@@ -48,16 +48,16 @@ public class Agents
             {
                 for (int z = 0; z < _grid.Cells.GetLength(2); z++)
                 {
+                    int i = _grid.Cells.GetLength(1) * x + _grid.Cells.GetLength(2) * y + z;
+
                     Cell currentCell = _grid.Cells[x, y, z];
                     currentCell.Alive = true;
+                    currentCell.Occupancy = CellOccupancy.Occupied;
                     
-                    Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center);
+                    Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center, i);
                     currentCell.agent = newAgent;
                     newAgent.Cell = currentCell;
-
-                    newAgent.Obj.transform.localScale *= currentCell.CellSize;
-
-                    int i = _grid.Cells.GetLength(1) * x + _grid.Cells.GetLength(2) * y + z;
+                    
                     listAgents[i] = newAgent;
                 }
             }
@@ -82,12 +82,11 @@ public class Agents
                 {
                     Cell cell = _grid.Cells[i + placement.x, placement.y, j + placement.z]; 
                     cell.Alive = true;
+                    cell.Occupancy = CellOccupancy.Occupied;
 
-                    Agent newAgent = new Agent(agent, material, physicsMaterial, cell.Center);
+                    Agent newAgent = new Agent(agent, material, physicsMaterial, cell.Center, count);
                     cell.agent = newAgent;
                     newAgent.Cell = cell;
-
-                    newAgent.Obj.transform.localScale *= cell.CellSize;
 
                     listAgents[count] = newAgent;
                     count++;
@@ -117,12 +116,11 @@ public class Agents
                     {
                         Cell cell = _grid.Cells[j + placement.x, i + placement.y, k + placement.z];
                         cell.Alive = true;
+                        cell.Occupancy = CellOccupancy.Occupied;
 
-                        Agent newAgent = new Agent(agent, material, physicsMaterial, cell.Center);
+                        Agent newAgent = new Agent(agent, material, physicsMaterial, cell.Center, count);
                         cell.agent = newAgent;
                         newAgent.Cell = cell;
-
-                        newAgent.Obj.transform.localScale *= cell.CellSize;
 
                         listAgents[count] = newAgent;
                         count++;
@@ -143,12 +141,11 @@ public class Agents
 
             Cell currentCell = _grid.GetCell(cellLocation);
             currentCell.Alive = true;
+            currentCell.Occupancy = CellOccupancy.Occupied;
 
-            Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center);
+            Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center, i);
             currentCell.agent = newAgent;
             newAgent.Cell = currentCell;
-
-            newAgent.Obj.transform.localScale *= currentCell.CellSize;
 
             listAgents[i] = newAgent;
         }
@@ -170,12 +167,11 @@ public class Agents
             if (currentCell.Alive == false)
             {
                 currentCell.Alive = true;
+                currentCell.Occupancy = CellOccupancy.Occupied;
 
-                Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center);
+                Agent newAgent = new Agent(agent, material, physicsMaterial, currentCell.Center, count);
                 currentCell.agent = newAgent;
                 newAgent.Cell = currentCell;
-
-                newAgent.Obj.transform.localScale *= currentCell.CellSize;
 
                 listAgents[count] = newAgent;
                 count++;
@@ -195,15 +191,14 @@ public class Agents
         // Place First Agent
         Cell firstCell = _grid.GetCell(placement);
         firstCell.Alive = true;
+        firstCell.Occupancy = CellOccupancy.Occupied;
 
-        Agent firstAgent = new Agent(agent, material, physicsMaterial, firstCell.Center);
+        Agent firstAgent = new Agent(agent, material, physicsMaterial, firstCell.Center, count);
         firstCell.agent = firstAgent;
         firstAgent.Cell = firstCell;
 
-        firstAgent.Obj.transform.localScale *= firstCell.CellSize;
-
         listAgents[count] = firstAgent;
-
+        count++;
 
         //Place remaining agents
         while (count < NumberOfAgents && tries-- > 0)
@@ -217,12 +212,11 @@ public class Agents
             {
                 Cell randomNeighbour = faceNeighbours[Random.Range(0, faceNeighbours.Count)];
                 randomNeighbour.Alive = true;
-                
-                Agent newAgent = new Agent(agent, material, physicsMaterial, randomNeighbour.Center);
+                randomNeighbour.Occupancy = CellOccupancy.Occupied;
+
+                Agent newAgent = new Agent(agent, material, physicsMaterial, randomNeighbour.Center, count);
                 randomNeighbour.agent = newAgent;
                 newAgent.Cell = randomNeighbour;
-
-                newAgent.Obj.transform.localScale *= randomNeighbour.CellSize;
 
                 listAgents[count] = newAgent;
                 count++;

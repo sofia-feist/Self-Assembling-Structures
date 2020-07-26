@@ -2,17 +2,27 @@
 using UnityEngine;
 
 
+public enum CellOccupancy
+{
+    Empty,       // 0
+    Reserved,    // 1
+    Occupied,    // 2 
+}
+
+
 public class Cell
 {
     CellGrid _grid;
 
 
-    public int CellSize = 1;      // UNIT CELLS for now
+    internal static float CellSize = 0.05f;  
+    
     public Vector3Int Location;
     public Vector3 Center;
 
     public bool GoalCell;
     public bool Alive;
+    public CellOccupancy Occupancy;
 
 
     public Agent agent;
@@ -31,6 +41,7 @@ public class Cell
                  new Vector3(location.x + 0.5f, location.y + 0.5f, location.z + 0.5f) * CellSize;
         GoalCell = false;
         Alive = false;
+        Occupancy = CellOccupancy.Empty;
     }
 
 
@@ -50,7 +61,7 @@ public class Cell
         int y = Location.y;
         int z = Location.z;
 
-        int size = _grid.AreaSize;
+        float size = _grid.AreaSize;
 
         for (int i = x - 1; i <= x + 1; i++)
         {

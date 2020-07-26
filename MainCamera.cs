@@ -2,8 +2,8 @@
 
 public class MainCamera : MonoBehaviour
 {  
-    const float rotateSpeed = 4.0f;
-    const float panSpeed = 2.5f;
+    const float rotateSpeed = 2.0f;
+    const float panSpeed = 0.5f;
 
     Ray ray;
     Plane XZplane;
@@ -19,9 +19,9 @@ public class MainCamera : MonoBehaviour
     void Start()
     {
         // CAMERA START POSITION
-        int AreaMax = _3DSelfAssembly.AreaMax;
-        int AreaMin = _3DSelfAssembly.AreaMin;
-        int AreaWidth = Mathf.Abs(AreaMax - AreaMin);
+        float AreaMax = _3DSelfAssembly.AreaMax;
+        float AreaMin = _3DSelfAssembly.AreaMin;
+        float AreaWidth = Mathf.Abs(AreaMax - AreaMin);
         float AreaMiddle = AreaMin + AreaWidth * 0.5f;
 
         if (GUI.Reset == false && GUI.SuggestedShapeSelected == false)

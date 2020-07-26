@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 
 
@@ -11,11 +12,11 @@ public enum AgentState
     Final        // 3
 }
 
-public enum Tasks   // Roles of each module!!
+public enum Role   // Roles/Task of each module!!
 {
-    Building,       // 0
-    Walking,      // 1 
-    TemporarySupport,        // 2
+    Building,      
+    Walking,      
+    Support,       
     Stopped
 }
 
@@ -28,15 +29,19 @@ public class Agent
     public AgentState State;
     public GameObject Obj;
 
+    internal int Id;
+
     internal Rigidbody Rb;
     internal BoxCollider BoxColl;
 
-    public int ScentValue;    // Change Scent from int to Vector3Int for direction and proximity? (e.g., Seed at (70,70,70))
+    public int ScentValue;    // Use Scent vectors for direction and proximity? (or Seed at (70,70,70))
     public int ScentMax;
     public int StepCount;
 
     internal static float breakForce = 400;  // What values should I give?
     internal static float breakTorque = 400;
+
+    //Connector info?
 
     
 
@@ -44,19 +49,17 @@ public class Agent
 
 
     // Constructor
-    public Agent(GameObject prefab, Material material, PhysicMaterial physicsMaterial, Vector3 center)
+    public Agent(GameObject prefab, Material material, PhysicMaterial physicsMaterial, Vector3 center, int _Id)
     {
-        Obj = Object.Instantiate(prefab, center, Quaternion.identity);
+        Id = _Id;
+
+        Obj = UnityEngine.Object.Instantiate(prefab, center, Quaternion.identity);
         Obj.GetComponent<MeshRenderer>().sharedMaterial = material;
 
         BoxColl = Obj.AddComponent<BoxCollider>();
-        BoxColl.size = new Vector3(0.98f, 0.98f, 0.98f);
         BoxColl.sharedMaterial = physicsMaterial;
-        BoxColl.enabled = false;
 
         Rb = Obj.GetComponent<Rigidbody>();
-        Rb.maxDepenetrationVelocity = 5;    // Should this stay?
-        Rb.useGravity = false;
 
 
         State = AgentState.Inactive;

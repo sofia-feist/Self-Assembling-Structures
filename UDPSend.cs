@@ -14,9 +14,9 @@ using UnityEngine;
 public class UDPSend : MonoBehaviour
 {
     // Connection properties
-    private string IP = "127.0.0.1";  // default localhost  
-    private int port = 8050;
-    UdpClient client;
+    private static string IP = "127.0.0.1";  // default localhost  
+    private static int port = 8050;
+    private static UdpClient client;
 
 
 
@@ -24,7 +24,7 @@ public class UDPSend : MonoBehaviour
     // Connect to the remote host when Unity starts
     void Start()
     {
-        client = new UdpClient(IP, port);
+        if (client == null) client = new UdpClient(IP, port);
     }
 
 
@@ -37,36 +37,32 @@ public class UDPSend : MonoBehaviour
 
 
     // Encode Message to Send: includes the coordinates of the center of the cells and cell size
-    internal string EncodeMessage(Agent[] listAgents)
+    internal static string EncodeMessage(Vector3[] listPositions)
     {
         string msg = "";
 
-        foreach (Agent agent in listAgents)
+        foreach (Vector3 position in listPositions)
         {
-            Vector3 center = agent.Cell.Center;
-            string x = center.x.ToString();
-            string y = center.z.ToString();  // Swap y with z for Rhino Coordinates
-            string z = center.y.ToString();  //
-
-            string size = agent.Cell.CellSize.ToString();
+            string x = position.x.ToString();
+            string y = position.z.ToString();  // Swap y with z for Rhino Coordinates
+            string z = position.y.ToString();  //
 
             // Construct Message
-            msg += $"{x},{y},{z},{size},";
+            msg += $"{x},{y},{z},";
         }
 
-        msg = msg.Remove(msg.Length - 1);
+        string size = Cell.CellSize.ToString();
+        msg += size;
+
         return msg;
     }
 
 
     // Send Data via UDP
-    internal void SendData(string message)
+    internal static void SendData(string message)
     {
         try
         {
-            // Print status
-            //print("Sending to " + IP + " : " + port);
-
             // Encodes data in binary format using the UTF8 encoding
             byte[] data = Encoding.UTF8.GetBytes(message);
 

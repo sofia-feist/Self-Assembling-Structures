@@ -11,55 +11,53 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class UDPReceive : MonoBehaviour
 {
     // Receiving Thread
-    Thread receiveThread;
+    static Thread receiveThread;
+    static bool isRunning;
  
-    UdpClient client;
-    private int port = 8051;
+    private static UdpClient client;
+    private static int port = 8051;
+
 
 
     // Received Message
-    private string receivedData = "";
-    private event EventHandler MessageReceived;
+    private static string receivedData = "";
+    private event EventHandler _MessageReceived;
 
+    internal static float maxDisplacement;
+    internal static List<Vector3> displacements = new List<Vector3>();
 
+    internal static bool MessageReceivedBool = false;
 
 
     // Starts receiving thread when Unity starts
     void Start()
     {
         // Create a new thread to read incoming UDP messages.
-        receiveThread = new Thread(new ThreadStart(ReceiveData));
-        receiveThread.IsBackground = true;
-        receiveThread.Start();
+        if (receiveThread == null) 
+        { 
+            receiveThread = new Thread(new ThreadStart(ReceiveData));
+            receiveThread.IsBackground = true;
+            receiveThread.Start();
+            isRunning = true;
+        }
 
         // Decodes the message when Message Received event is triggered
-        MessageReceived += new EventHandler((s, e) => DecodeMessage(s, e, receivedData));
+        _MessageReceived += MessageReceived;
     }
-
-
-
-    // Closes the UDP connection and aborts the receiving thread when application is closed
-    void OnApplicationQuit()
-    {
-        if (receiveThread.IsAlive)
-            receiveThread.Abort();
-        
-        client.Close();
-    }
-
 
 
     // Receive Data via UDP  
     private void ReceiveData()
     {
-        client = new UdpClient(port);
+        if (client == null) client = new UdpClient(port);
 
-        while (true)
+        while (isRunning)
         {
             try
             {
@@ -72,10 +70,13 @@ public class UDPReceive : MonoBehaviour
 
                 // Update the received data
                 receivedData = stringData;
-                //print("Message Received: " + receivedData);
 
-                // Triggers the MessageReceived event to decode the message
-                OnMessageReceived(EventArgs.Empty);
+                // Decode the received data
+                DecodeMessage(receivedData);
+
+                // Triggers the MessageReceived event to
+                MessageReceivedBool = true;
+                //OnMessageReceived();
             }
             catch (Exception err)
             {
@@ -85,20 +86,46 @@ public class UDPReceive : MonoBehaviour
     }
 
 
-    // Trigger the MessageReceived event, which in turn triggers the DecodeMessage method
-    protected virtual void OnMessageReceived(EventArgs e)
+    // Decodes the Message received from Grasshopper
+    private void DecodeMessage(string msg)
     {
-        MessageReceived?.Invoke(this, e);
+        maxDisplacement = float.Parse(msg);
+
+        //string[] data = msg.Split(',');
+        //displacements.Clear());
+
+        //for (int i = 0; i < data.Length; i += 3)
+        //{
+        //    Vector3 displacement = new Vector3(float.Parse(data[i]), float.Parse(data[i + 1]), float.Parse(data[i + 2]));
+        //    displacements.Add(displacement);
+        //}
     }
 
 
-    // Decode the string Message received from Grasshopper (just coordinates for now)
-    private static void DecodeMessage(object sender, EventArgs e, string msg)
+    // Trigger the MessageReceived event, which in turn triggers the DecodeMessage method
+    protected virtual void OnMessageReceived()
     {
-        string[] data = msg.Split(',');
-            
-        Vector3 center = new Vector3(float.Parse(data[0]), float.Parse(data[1]), float.Parse(data[2]));
+        _MessageReceived?.Invoke(this, EventArgs.Empty);
+    }
 
-        print(center);
+
+    // 
+    private static void MessageReceived(object sender, EventArgs e)
+    {
+        //Debug.Log("Message Received: " + receivedData);
+        //Debug.Log("Message Received: " + maxDisplacement.ToString("F10"));
+        MessageReceivedBool = true;
+    }
+
+
+    // Closes the UDP connection and aborts the receiving thread when application is closed
+    void OnApplicationQuit()
+    {
+        isRunning = false;
+
+        if (receiveThread.IsAlive)
+            receiveThread.Abort(); // Does NOT WORK
+
+        client.Close();
     }
 }

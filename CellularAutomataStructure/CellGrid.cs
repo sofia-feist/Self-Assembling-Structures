@@ -5,19 +5,19 @@ public class CellGrid
 {
     CommonMethods CM = new CommonMethods();
 
-    int AreaMin;
-    int AreaMax;
+    private float AreaMin;
+    private float AreaMax;
 
-    public Cell[,,] Cells;
-    public int AreaSize;
+    internal Cell[,,] Cells;
+    internal int AreaSize;
 
 
 
-    public CellGrid(int areaMin, int areaMax)
+    public CellGrid(float areaMin, float areaMax)
     {
         AreaMin = areaMin;
         AreaMax = areaMax;
-        AreaSize = AreaMax - AreaMin;
+        AreaSize = (int) ((AreaMax - AreaMin) / Cell.CellSize);
 
         Cells = new Cell[AreaSize, AreaSize, AreaSize];
 
@@ -43,9 +43,9 @@ public class CellGrid
         }
         else
         {
-            int x = (int)Mathf.Floor((position.x - AreaMin));
-            int y = (int)Mathf.Floor((position.y - AreaMin));
-            int z = (int)Mathf.Floor((position.z - AreaMin));
+            int x = (int)Mathf.Floor((position.x - AreaMin) / Cell.CellSize);
+            int y = (int)Mathf.Floor((position.y - AreaMin) / Cell.CellSize);
+            int z = (int)Mathf.Floor((position.z - AreaMin) / Cell.CellSize);
 
             return new Vector3Int(x, y, z);
         }
