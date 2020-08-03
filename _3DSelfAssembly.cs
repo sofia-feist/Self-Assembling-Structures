@@ -16,7 +16,6 @@ public class _3DSelfAssembly : MonoBehaviour
     CellGrid grid;
     ReconfigurationRules reconfiguration;
     CommonMethods CM = new CommonMethods();
-    UDPReceive udpReceive;
 
 
 
@@ -40,7 +39,7 @@ public class _3DSelfAssembly : MonoBehaviour
     public static float AreaMax;
 
     public static int NumAgents;
-    public const int defaultNumAgents = 50;
+    public const int defaultNumAgents = 120;
     int maxActiveAgents;
 
 
@@ -73,8 +72,6 @@ public class _3DSelfAssembly : MonoBehaviour
 
     void Start()
     {
-        //sph = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-
         // INITIALIZE NUMBER OF AGENTS
         if (GUI.Reset == false && GUI.SuggestedShapeSelected == false)
             NumAgents =  defaultNumAgents;   // Set Number of Agents to default Number: 120
@@ -154,27 +151,17 @@ public class _3DSelfAssembly : MonoBehaviour
         // Send data to GH
         // Implement Events to send message (each time an agent moves)
         //UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).ToArray()));
-        //waitHandle.WaitOne();
-        //print("_" + UDPReceive.maxDisplacement.ToString("F10"));
+
 
         //foo();
 
-        //SetGoalShapeFromSeed(new Vector3Int(1, 0, 1));
-        //SetGoalShape(shapePoints);
-        //CheckAliveCells();
 
-        //GenerateGoalShape(new List<Vector3Int>() { new Vector3Int(5, 0, 5), new Vector3Int(10, 0, 5), new Vector3Int(5, 0, 10), new Vector3Int(10, 0, 10) }, 90);
-        //CheckAliveCells();
-        //print(evaluateGoalShapeSimilarity());
 
         //OptimizationAlgorithms Optimize = new OptimizationAlgorithms(grid, 30, 500);
         ////var l = Optimize.GenerateGoalShape(new List<Vector3Int>() { new Vector3Int(5, 0, 5), new Vector3Int(10, 0, 5), new Vector3Int(5, 0, 10), new Vector3Int(10, 0, 10) }, 90);
         //Optimize.SimulatedAnnealing(new List<Vector3Int>() { new Vector3Int(5, 0, 5), new Vector3Int(10, 0, 5), new Vector3Int(5, 0, 10), new Vector3Int(10, 0, 10) }, 90);
         //foreach (var cell in Optimize.bestCandidate)
         //    cell.GoalCell = true;
-        //CheckAliveCells();
-
-        //foo();
     }
 
 
@@ -183,10 +170,16 @@ public class _3DSelfAssembly : MonoBehaviour
 
     // Update is called once per frame
     void Update()
-    {
+    { 
+        if (UDPReceive.MessageReceived)
+        {
+            shapePoints = UDPReceive.coordinates;
+            SetGoalShape(shapePoints);
+            UDPReceive.MessageReceived = false;
+        }
+
         //CheckAliveCells();
-        //sph.transform.localScale = new Vector3(radius, radius, radius);
- 
+
     }
 
 

@@ -30,7 +30,7 @@ public class UDPReceive : MonoBehaviour
     internal static bool MessageReceived = false;
 
     internal static float maxDisplacement;
-    internal static List<Vector3> displacements = new List<Vector3>();
+    internal static List<Vector3> coordinates = new List<Vector3>();
 
     
 
@@ -85,16 +85,21 @@ public class UDPReceive : MonoBehaviour
     // Decodes the Message received from Grasshopper
     private void DecodeMessage(string msg)
     {
-        maxDisplacement = float.Parse(msg);
+        //Debug.Log(msg.Length);
 
-        //string[] data = msg.Split(',');
-        //displacements.Clear());
+        if (msg.Length < 30)
+            maxDisplacement = float.Parse(msg);
+        else
+        {
+            string[] data = msg.Split(',');
+            coordinates.Clear();
 
-        //for (int i = 0; i < data.Length; i += 3)
-        //{
-        //    Vector3 displacement = new Vector3(float.Parse(data[i]), float.Parse(data[i + 1]), float.Parse(data[i + 2]));
-        //    displacements.Add(displacement);
-        //}
+            for (int i = 0; i < data.Length; i += 3)
+            {
+                Vector3 displacement = new Vector3(float.Parse(data[i]), float.Parse(data[i + 1]), float.Parse(data[i + 2]));
+                coordinates.Add(displacement);
+            }
+        }
     }
 
 
