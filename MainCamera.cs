@@ -3,7 +3,7 @@
 public class MainCamera : MonoBehaviour
 {  
     const float rotateSpeed = 2.0f;
-    const float panSpeed = 0.5f;
+    const float panSpeed = 0.1f;
 
     Ray ray;
     Plane XZplane;

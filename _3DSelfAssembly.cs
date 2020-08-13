@@ -65,7 +65,7 @@ public class _3DSelfAssembly : MonoBehaviour
     // Diagnostics
     public static Stopwatch timer = new Stopwatch();
     List<GameObject> alive = new List<GameObject>();
-    
+    Color lerpedColor;
 
 
 
@@ -83,7 +83,7 @@ public class _3DSelfAssembly : MonoBehaviour
         if (GUI.GoalShape == null)
             GUI.GoalShape = DefaultShape;
         
-        GameObject GoalShape = Instantiate(GUI.GoalShape, new Vector3(0.25f, 0, 0.25f), Quaternion.identity);  //Pivot: bottom left corner
+        GameObject GoalShape = Instantiate(GUI.GoalShape, new Vector3(0.05f, 0, 0.05f), Quaternion.identity);  //Pivot: bottom left corner
         GoalShape.layer = 8;
         shapePoints = CM.PointsFromGeometry(GoalShape, Cell.CellSize).ToList();
         //if (GUI.SuggestedShapeSelected) 
@@ -137,7 +137,7 @@ public class _3DSelfAssembly : MonoBehaviour
 
 
         // INSTANTIATE RECONFIGURATION RULES
-        reconfiguration = new ReconfigurationRules(currentSpeed, grid);
+        reconfiguration = new ReconfigurationRules(grid);
 
         //foreach (var item in shapePoints)
         //{
@@ -148,9 +148,6 @@ public class _3DSelfAssembly : MonoBehaviour
         //AddJoints();
 
 
-        // Send data to GH
-        // Implement Events to send message (each time an agent moves)
-        //UDPSend.SendData(UDPSend.EncodeMessage(listAgents.Select(a => a.Cell.Center).ToArray()));
 
 
         //foo();
@@ -162,6 +159,11 @@ public class _3DSelfAssembly : MonoBehaviour
         //Optimize.SimulatedAnnealing(new List<Vector3Int>() { new Vector3Int(5, 0, 5), new Vector3Int(10, 0, 5), new Vector3Int(5, 0, 10), new Vector3Int(10, 0, 10) }, 90);
         //foreach (var cell in Optimize.bestCandidate)
         //    cell.GoalCell = true;
+
+
+
+        //foreach (var item in shapePoints)
+        //    Instantiate(agentPrefab, item, Quaternion.identity);
     }
 
 
@@ -170,17 +172,23 @@ public class _3DSelfAssembly : MonoBehaviour
 
     // Update is called once per frame
     void Update()
-    { 
-        if (UDPReceive.MessageReceived)
-        {
-            shapePoints = UDPReceive.coordinates;
-            SetGoalShape(shapePoints);
-            UDPReceive.MessageReceived = false;
-        }
-
+    {
+        //RandomReconfiguration();
+        //SelfReconfiguration();
         //CheckAliveCells();
 
+        //foreach (var item in listAgents)
+        //{
+        //    lerpedColor = Color.Lerp(Color.blue, Color.green, item.ScentValue / 20f);
+        //    if (item.ScentValue != 0)
+        //    {
+        //        item.Obj.GetComponent<Renderer>().material.color = lerpedColor;
+        //    }
+        //    if (item.State == AgentState.Seed)
+        //        item.Obj.GetComponent<Renderer>().material.color = Color.red;
+        //}
     }
+
 
 
     void foo()
@@ -239,13 +247,12 @@ public class _3DSelfAssembly : MonoBehaviour
         alive.Clear();
 
         GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        obj.transform.localScale = new Vector3(0.048f, 0.048f, 0.048f);
+        obj.transform.localScale = new Vector3(0.01f, 0.01f, 0.01f);
         obj.GetComponent<BoxCollider>().enabled = false;
-        obj.GetComponent<Renderer>().material.color = finalState;
 
         foreach (var cell in grid.Cells)
         {
-            if (cell.GoalCell == true)
+            if (cell.Alive == true)
             {
                 var clone = Instantiate(obj, cell.Center, Quaternion.identity);
                 alive.Add(clone);
@@ -363,9 +370,9 @@ public class _3DSelfAssembly : MonoBehaviour
             float probabilityOfChoice = 1.0f - nNeighbours / 6.0f + (float)1e-3;
             float thresholdOfAcceptance = 1.0f - Mathf.Pow(UnityEngine.Random.Range(0.0f, 1.0f), nNeighbours);
 
-            if (neighbours.Any(n => n.agent.State == AgentState.Final) &&    // Leave inactive agents next to goal structure with a lower probability of being chosen to avoid disconnections
-                agents.Any(a => a.Cell.GetFaceNeighbours().Count(n => n.Alive && n.agent.State == AgentState.Final) == 0))
-                continue;
+            //if (neighbours.Any(n => n.agent.State == AgentState.Final) &&    // Leave inactive agents next to goal structure with a lower probability of being chosen to avoid disconnections
+            //    agents.Any(a => a.Cell.GetFaceNeighbours().Count(n => n.Alive && n.agent.State == AgentState.Final) == 0))
+            //    continue;
 
             if (thresholdOfAcceptance < probabilityOfChoice)
                 return agent;
@@ -403,32 +410,21 @@ public class _3DSelfAssembly : MonoBehaviour
     ////////////////////////   SELF-RECONFIGURATION  ////////////////////////
 
     // RandomReconfiguration: Random Reconfiguration process to test the rules
-    public IEnumerator RandomReconfiguration()
+    public void RandomReconfiguration()
     {
-        while (true)
+        if (GUI.Paused == false)
         {
-            if (GUI.Paused == false)
-            {
-                Agent agent = AgentSelectionByNeighbours(listAgents);
+            Agent agent = AgentSelectionByNeighbours(listAgents);
+            
+            var chosenRule = reconfiguration.ChoseRule(listAgents, agent);
 
-                Action nextAction = reconfiguration.ChoseAction(listAgents, agent);
-
-                if (nextAction != Action.NoAction)
-                    reconfiguration.ExecuteAction(this, nextAction, agent);
-
-                yield return new WaitForSeconds(currentSpeed);
-            }
-            else
-            {
-                yield return null;
-            }
+            if (chosenRule != null)  reconfiguration.ExecuteAction(agent, chosenRule);
         }
     }
 
 
 
 
-  
 
     ////////////////////////   SELF-ASSEMBLY  ////////////////////////
 
@@ -470,13 +466,13 @@ public class _3DSelfAssembly : MonoBehaviour
 
                 if (state == AgentState.Active)
                 {
-                    Action nextAction = reconfiguration.ChoseAction(listAgents, agent);
+                    var chosenRule = reconfiguration.ChoseRule(listAgents, agent);
 
-                    if (nextAction != Action.NoAction)
+                    if (chosenRule != null)
                     {
-                        reconfiguration.ExecuteAction(this, nextAction, agent);
+                        reconfiguration.ExecuteAction(agent, chosenRule);
                         agent.StepCount++;
-                        yield return new WaitForSeconds(currentSpeed);
+                        yield return null;
 
 
                         // Update Scent
@@ -496,7 +492,7 @@ public class _3DSelfAssembly : MonoBehaviour
                             //UpdateJoints(agent);
                             UpdateSeed(ref Seed);
                         }
-                        yield return null; //new WaitForSeconds(currentSpeed);    <-  Probably not needed?  
+                        yield return new WaitForSeconds(currentSpeed);    //<-  Probably not needed?  
 
                     }
                     else
@@ -546,8 +542,7 @@ public class _3DSelfAssembly : MonoBehaviour
     {
         // Initializes Goal Shape/Goal Cells
         SetGoalShape(shapePoints);
-
-        CM.RandomShuffle(agents);
+        CommonMethods.RandomShuffle(agents);
 
         foreach (var agent in agents)
         {
@@ -558,7 +553,7 @@ public class _3DSelfAssembly : MonoBehaviour
             {
                 agent.State = AgentState.Final;
                 agent.Obj.GetComponent<Renderer>().material.color = finalState;
-                IsSupport(agent);
+                //IsSupport(agent);
             }
             else if (nNeighbours < 4 && listAgents.Count(a => a.State == AgentState.Active) < maxActiveAgents)
             {
@@ -592,7 +587,7 @@ public class _3DSelfAssembly : MonoBehaviour
         foreach (var agent in staticAgents)
         {
             bool unfilledHorizontalGoalCells = agent.Cell.GetHorizontalFaceNeighbours().Any(n => n.GoalCell == true && (n.Alive == false || (n.Alive == true && n.agent.State != AgentState.Final)));
-            bool unfilledVerticalGoalCells = agent.Cell.GetVerticalFaceNeighbours().Any(n => n.GoalCell == true && (n.Alive == false || (n.Alive == true && n.agent.State != AgentState.Final)));
+            bool unfilledVerticalGoalCells = agent.Cell.GetYFaceNeighbours().Any(n => n.GoalCell == true && (n.Alive == false || (n.Alive == true && n.agent.State != AgentState.Final)));
 
             if (unfilledHorizontalGoalCells)
                 potentialHorizontalSeeds.Add(agent);
@@ -663,7 +658,7 @@ public class _3DSelfAssembly : MonoBehaviour
     bool CheckFinalPosition(Agent Seed, Agent agent)
     {
         var seedHorizontalNeighbours = Seed.Cell.GetHorizontalFaceNeighbours().Where(n => n.GoalCell == true);
-        var seedVerticalNeighbours = Seed.Cell.GetVerticalFaceNeighbours().Where(n => n.GoalCell == true);
+        var seedVerticalNeighbours = Seed.Cell.GetYFaceNeighbours().Where(n => n.GoalCell == true);
 
         bool unfilledHorizontalSeedNeighbours = seedHorizontalNeighbours.Any(n => n.Alive == false || (n.Alive == true && n.agent.State != AgentState.Final));
 

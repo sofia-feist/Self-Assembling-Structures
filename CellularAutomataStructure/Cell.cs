@@ -161,8 +161,29 @@ public class Cell
     }
 
 
-    // GetVerticalFaceNeighbours: Gets only the (2: up and down) vertical face neighbours of a cubic cell
-    public List<Cell> GetVerticalFaceNeighbours()
+    
+
+
+    // GetXFaceNeighbours: Gets only the (2: East, West) face neighbours of a cubic cell
+    public List<Cell> GetXFaceNeighbours()
+    {
+        List<Cell> listNeighbours = new List<Cell>();
+
+        int x = Location.x;
+        int y = Location.y;
+        int z = Location.z;
+
+        int size = _grid.AreaSize;
+
+        if (x != 0) listNeighbours.Add(_grid.Cells[x - 1, y, z]);
+        if (x != size - 1) listNeighbours.Add(_grid.Cells[x + 1, y, z]);
+
+        return listNeighbours;
+    }
+
+
+    // GetYFaceNeighbours: Gets only the (2: up and down) face neighbours of a cubic cell
+    public List<Cell> GetYFaceNeighbours()
     {
         List<Cell> listNeighbours = new List<Cell>();
 
@@ -177,6 +198,26 @@ public class Cell
 
         return listNeighbours;
     }
+
+    // GetYFaceNeighbours: Gets only the (2: up and down) face neighbours of a cubic cell
+    public List<Cell> GetZFaceNeighbours()
+    {
+        List<Cell> listNeighbours = new List<Cell>();
+
+        int x = Location.x;
+        int y = Location.y;
+        int z = Location.z;
+
+        int size = _grid.AreaSize;
+
+        if (z != 0) listNeighbours.Add(_grid.Cells[x, y, z - 1]);
+        if (z != size - 1) listNeighbours.Add(_grid.Cells[x, y, z + 1]);
+
+        return listNeighbours;
+    }
+
+
+
 
 
     // OppositeNeighbours: Checks if two cells are opposite neighbours of a given cell

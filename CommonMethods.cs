@@ -17,7 +17,7 @@ public class CommonMethods
     }
 
     // RandomShuffle(list): Fisher-Yates Shuffle algorithm; shuffles a list to randomly organize the its elements
-    public void RandomShuffle<T>(List<T> list)
+    public static void RandomShuffle<T>(List<T> list)
     {
         for (int i = 0; i < list.Count; i++)
         {
@@ -30,7 +30,7 @@ public class CommonMethods
     }
 
     // RandomShuffle(array): Fisher-Yates Shuffle algorithm; shuffles an array to randomly organize the its elements
-    public void RandomShuffle<T>(T[] list)
+    public static void RandomShuffle<T>(T[] list)
     {
         for (int i = 0; i < list.Length; i++)
         {

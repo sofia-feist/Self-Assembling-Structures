@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 
@@ -18,6 +19,16 @@ public enum Role   // Roles/Task of each module!!
     Walking,      
     Support,       
     Stopped
+}
+
+public enum Connections 
+{
+    North,
+    South,
+    East,
+    West,
+    Down,
+    Up
 }
 
 
@@ -41,6 +52,7 @@ public class Agent
     internal static float breakForce = 400;  // What values should I give?
     internal static float breakTorque = 400;
 
+    internal List<Connections> activeConnectors;
     //Connector info?
 
     
@@ -65,8 +77,34 @@ public class Agent
         State = AgentState.Inactive;
 
         ScentValue = 0;
-        ScentMax = 70;
+        ScentMax = 20;
         StepCount = 0;
+
+        activeConnectors = new List<Connections>();
+    }
+
+
+    public List<Connections> GetActiveConnectors()
+    {
+        List<Connections> activeConnectors = new List<Connections>();
+        Cell east = Cell.MiddleEast();
+        Cell west = Cell.MiddleWest();
+        Cell north = Cell.MiddleNorth();
+        Cell south = Cell.MiddleSouth();
+        Cell down = Cell.Bottom();
+        Cell up = Cell.Up();
+        
+
+        if (east?.Alive == true) activeConnectors.Add(Connections.East);
+        if (west?.Alive == true) activeConnectors.Add(Connections.West);
+
+        if (north?.Alive == true) activeConnectors.Add(Connections.North);
+        if (south?.Alive == true) activeConnectors.Add(Connections.South);
+
+        if (up?.Alive == true) activeConnectors.Add(Connections.Up);
+        if (down?.Alive == true) activeConnectors.Add(Connections.Down);
+
+        return activeConnectors;
     }
 
 

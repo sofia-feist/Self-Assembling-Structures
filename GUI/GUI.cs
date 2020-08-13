@@ -96,6 +96,9 @@ public class GUI : MonoBehaviour
         reconfigurationSpeed.minValue = _3DSelfAssembly.maxSpeed;
         reconfigurationSpeed.maxValue = _3DSelfAssembly.minSpeed;
         reconfigurationSpeed.value = _3DSelfAssembly.minSpeed - _3DSelfAssembly.defaultSpeed;
+        //reconfigurationSpeed.minValue = 1f;
+        //reconfigurationSpeed.maxValue = 0.02f;
+        //reconfigurationSpeed.value = 0.5f;
 
 
         // Number of Agents Input Field
@@ -154,6 +157,8 @@ public class GUI : MonoBehaviour
     {
         // Update Slider value
         SA.currentSpeed = reconfigurationSpeed.maxValue - reconfigurationSpeed.value;
+        //Time.fixedDeltaTime = reconfigurationSpeed.maxValue - reconfigurationSpeed.value;
+        //Debug.Log(Time.timeScale.ToString());
 
 
         // QUIT APP
