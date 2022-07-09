@@ -9,7 +9,7 @@ This project was developed in the context of my dissertation to obtain a MSc. in
 In order to simulate and analyse robotic behaviour, two different simulation environments were used: (1) <b>Unity 3D</b> to simulate the robot’s physical behaviour and validate stability calculations with rigid-body simulations, and (2) <b>Grasshopper</b> for structural analysis and optimization. These two environments were connected using a User Datagram Protocol (UDP) connection for real-time data exchange and to create a feedback loop for the self-reconfiguration process.  
 
 <p align="center">
-  <img src=" Images/Workflow.png" width="800">
+  <img src="Images/Workflow.png" width="800">
 </p>
 
 <p align="center"> Figure 1 - Self-Reconfiguration Workflow between Unity and Grasshopper</p>
@@ -25,7 +25,7 @@ Before starting the reconfiguration process, we need to make sure that the targe
 ### Module Design and Motion Control
 
 <p align="center">
-  <img src=" Images/X90 North Pivot Rule.jpg" width="600"> 
+  <img src="Images/X90 North Pivot Rule.jpg" width="600"> 
 </p>
 
 <p align="center"> Figure 2 - Example of a module motion</p>
@@ -39,7 +39,7 @@ To make the robotic system more scalable, we use a distributed strategy of motio
 Each module action results in a different configuration. If more than one rule applies, all of those possible configurations will have different corresponding fitnesses. We evaluate the fitness of each action based on three fitness criteria: (1) convergence towards the given target configuration, (2) stability of the overall assembly, or (3) the structural performance of the assembly.
 
 <p align="center">
-  <img src=" Images/Rules_actions.jpg" width="800">
+  <img src="Images/Rules_actions.jpg" width="800">
 </p>
 
 <p align="center"> Figure 3 - Possible module actions and corresponding fitnesses</p>
@@ -53,7 +53,7 @@ Because we have three fitness criteria that modules need to consider when choosi
 Examples of the resulting reconfiguration sequence can be found in the image below (Figure 4) and in the video [here](https://sofia-feist.github.io/SRrobots.html).
 
 <p align="center">
-  <img src=" Images/Assembly_Complete_Stability_All.jpg" width="800">
+  <img src="Images/Assembly_Complete_Stability_All.jpg" width="800">
 </p>
 
 <p align="center"> Figure 4 - Reconfiguration sequence according to Convergence and Stability</p>
